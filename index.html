@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OARS · Exam Read-Aloud Converter</title>
+
+<!-- CDN Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:       #0b0e13;
+  --surface:  #111520;
+  --card:     #171c28;
+  --border:   #232840;
+  --accent:   #3b82f6;
+  --accent-g: #10b981;
+  --accent-y: #f59e0b;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --danger:   #ef4444;
+  --radius:   10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.header-icon {
+  width: 34px; height: 34px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.header-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.header-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.header-tag {
+  margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+/* ── Main layout ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 40px 24px 60px;
+  gap: 24px;
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Upload card ── */
+.upload-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  width: 100%;
+}
+
+.card-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  background: var(--card);
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color: var(--accent);
+  background: #3b82f610;
+}
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.drop-icon { font-size: 40px; margin-bottom: 12px; }
+.drop-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.drop-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.drop-sub strong { color: var(--accent); }
+
+/* File loaded state */
+.file-loaded {
+  display: none;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 14px;
+}
+.file-loaded.show { display: flex; }
+.file-icon { font-size: 24px; flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.file-clear {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.file-clear:hover { color: var(--danger); }
+
+/* ── Convert button ── */
+.convert-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.convert-btn:hover:not(:disabled) { background: #2563eb; }
+.convert-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Progress card ── */
+.progress-card {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  width: 100%;
+}
+.progress-card.show { display: block; }
+
+.steps { display: flex; flex-direction: column; gap: 0; }
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.step:last-child { border-bottom: none; }
+
+.step-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  flex-shrink: 0;
+  transition: all 0.3s;
+  background: var(--card);
+  margin-top: 2px;
+}
+.step.active .step-dot {
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.step.done .step-dot {
+  border-color: var(--accent-g);
+  background: var(--accent-g);
+  color: white;
+}
+.step.error .step-dot {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: white;
+}
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 #3b82f640; }
+  50% { box-shadow: 0 0 0 6px #3b82f600; }
+}
+
+.step-content { flex: 1; }
+.step-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+.step.active .step-title { color: var(--accent); }
+.step.done .step-title { color: var(--accent-g); }
+.step-detail {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── Preview card ── */
+.preview-card {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  width: 100%;
+}
+.preview-card.show { display: block; }
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.preview-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.preview-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--accent-g);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.download-btn:hover { background: #059669; }
+
+.q-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 420px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+.q-preview-list::-webkit-scrollbar { width: 4px; }
+.q-preview-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.q-preview-item {
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.q-preview-item:hover {
+  background: var(--card);
+  border-color: var(--border);
+}
+.q-preview-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.q-preview-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* ── Error ── */
+.error-card {
+  display: none;
+  background: #1a0a0a;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  width: 100%;
+  font-size: 13px;
+  color: var(--danger);
+}
+.error-card.show { display: block; }
+
+/* ── Reset link ── */
+.reset-link {
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  margin-top: 8px;
+  display: none;
+}
+.reset-link.show { display: inline; }
+.reset-link:hover { color: var(--text); }
+
+/* ── Info box ── */
+.info-box {
+  width: 100%;
+  padding: 16px 20px;
+  background: #0f1a2e;
+  border: 1px solid #1d3a6e;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #93c5fd;
+  line-height: 1.6;
+}
+.info-box strong { color: #bfdbfe; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📄</div>
+  <div>
+    <div class="header-title">OARS · Exam Read-Aloud Converter</div>
+  </div>
+  <span class="header-sub">High Point University</span>
+  <div class="header-tag">OARS TOOL</div>
+</div>
+
+<div class="main">
+
+  <!-- Info -->
+  <div class="info-box">
+    <strong>How it works:</strong> Upload a PDF or DOCX exam from Accommodate. Claude converts all chemistry notation, formulas, and symbols into clean spoken language, then exports a Word document (.docx) ready for a student to open and use with Word's <strong>Read Aloud</strong> feature.
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-card">
+    <div class="card-label">Step 1 — Upload Exam</div>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.docx" onchange="onFileSelected(this.files[0])">
+      <div class="drop-icon">📂</div>
+      <div class="drop-title">Drop exam file here</div>
+      <div class="drop-sub">or click to browse &nbsp;·&nbsp; <strong>PDF</strong> or <strong>DOCX</strong></div>
+    </div>
+
+    <div class="file-loaded" id="fileLoaded">
+      <div class="file-icon" id="fileIcon">📄</div>
+      <div class="file-info">
+        <div class="file-name" id="fileName"></div>
+        <div class="file-size" id="fileSize"></div>
+      </div>
+      <button class="file-clear" onclick="clearFile()" title="Remove file">✕</button>
+    </div>
+
+    <button class="convert-btn" id="convertBtn" onclick="startConversion()" disabled>
+      ⚡ Convert to Read-Aloud DOCX
+    </button>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-card" id="progressCard">
+    <div class="card-label">Step 2 — Converting</div>
+    <div class="steps">
+      <div class="step" id="step1">
+        <div class="step-dot" id="dot1">1</div>
+        <div class="step-content">
+          <div class="step-title">Extracting exam text</div>
+          <div class="step-detail" id="detail1">Reading PDF or DOCX content...</div>
+        </div>
+      </div>
+      <div class="step" id="step2">
+        <div class="step-dot" id="dot2">2</div>
+        <div class="step-content">
+          <div class="step-title">Converting with Claude</div>
+          <div class="step-detail" id="detail2">Translating chemistry notation to spoken language...</div>
+        </div>
+      </div>
+      <div class="step" id="step3">
+        <div class="step-dot" id="dot3">3</div>
+        <div class="step-content">
+          <div class="step-title">Building Word document</div>
+          <div class="step-detail" id="detail3">Assembling accessible DOCX file...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-card" id="errorCard"></div>
+  <button class="reset-link" id="resetLink" onclick="fullReset()">← Start over</button>
+
+  <!-- Preview + Download -->
+  <div class="preview-card" id="previewCard">
+    <div class="preview-header">
+      <div>
+        <div class="preview-title" id="previewTitle">Ready to Download</div>
+        <div class="preview-meta" id="previewMeta"></div>
+      </div>
+      <button class="download-btn" id="downloadBtn" onclick="downloadDocx()">
+        ⬇ Download DOCX
+      </button>
+    </div>
+    <div class="card-label">Preview — Converted Questions</div>
+    <div class="q-preview-list" id="qPreviewList"></div>
+  </div>
+
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentFile = null;
+let docxBlob = null;
+let docxFilename = '';
+
+// ── Drag & drop ──────────────────────────────────────────────────────────────
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) onFileSelected(f);
+});
+
+function onFileSelected(file) {
+  if (!file) return;
+  if (!/\.(pdf|docx)$/i.test(file.name)) {
+    showError('Please upload a PDF or DOCX file.');
+    return;
+  }
+  currentFile = file;
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = formatBytes(file.size);
+  document.getElementById('fileIcon').textContent = file.name.endsWith('.pdf') ? '📕' : '📘';
+  document.getElementById('fileLoaded').classList.add('show');
+  document.getElementById('convertBtn').disabled = false;
+  hideError();
+}
+
+function clearFile() {
+  currentFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileLoaded').classList.remove('show');
+  document.getElementById('convertBtn').disabled = true;
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+// ── Conversion pipeline ──────────────────────────────────────────────────────
+async function startConversion() {
+  if (!currentFile) return;
+
+  // Reset UI
+  hideError();
+  document.getElementById('previewCard').classList.remove('show');
+  document.getElementById('progressCard').classList.add('show');
+  document.getElementById('convertBtn').disabled = true;
+  resetSteps();
+
+  try {
+    // Step 1: Extract text
+    setStep(1, 'active', `Reading ${currentFile.name}...`);
+    const rawText = currentFile.name.endsWith('.pdf')
+      ? await extractPDF(currentFile)
+      : await extractDOCX(currentFile);
+    setStep(1, 'done', `${rawText.length.toLocaleString()} characters extracted`);
+
+    // Step 2: Claude conversion
+    setStep(2, 'active', 'Sending to Claude — converting chemistry notation...');
+    const parsed = await convertWithClaude(rawText, currentFile.name);
+    const qCount = parsed.questions.length;
+    setStep(2, 'done', `${qCount} question${qCount !== 1 ? 's' : ''} converted`);
+
+    // Step 3: Build DOCX
+    setStep(3, 'active', 'Building Word document...');
+    const buffer = await buildDocx(parsed.questions, parsed.meta || {});
+    docxBlob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const base = currentFile.name.replace(/\.(pdf|docx)$/i, '');
+    docxFilename = base + '_ReadAloud.docx';
+    setStep(3, 'done', `${docxFilename} ready`);
+
+    // Show preview
+    showPreview(parsed);
+
+  } catch (err) {
+    showError(err.message || String(err));
+  }
+}
+
+// ── Text extraction ──────────────────────────────────────────────────────────
+async function extractPDF(file) {
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  let out = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    // Reconstruct text preserving line structure based on y-position
+    const items = content.items;
+    let lastY = null;
+    let line = '';
+    for (const item of items) {
+      const y = item.transform[5];
+      if (lastY !== null && Math.abs(y - lastY) > 3) {
+        out += line.trim() + '\n';
+        line = '';
+      }
+      line += item.str;
+      lastY = y;
+    }
+    if (line.trim()) out += line.trim() + '\n';
+    out += '\n';
+  }
+  return out;
+}
+
+async function extractDOCX(file) {
+  const ab = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: ab });
+  return result.value;
+}
+
+// ── Claude API ───────────────────────────────────────────────────────────────
+async function convertWithClaude(rawText, filename) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8000,
+      system: buildSystemPrompt(),
+      messages: [{
+        role: 'user',
+        content: `Convert this exam for Word Read Aloud. File: ${filename}\n\n${rawText.slice(0, 14000)}`
+      }]
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(`Claude API error ${resp.status}: ${err.error?.message || 'Unknown error'}`);
+  }
+
+  const data = await resp.json();
+  const raw = data.content.map(b => b.text || '').join('');
+  const clean = raw.replace(/```json[\s\S]*?```/g, m => m.slice(7, -3))
+                   .replace(/^```|```$/gm, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch(e) {
+    // Try to extract JSON from the response
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('Could not parse Claude response as JSON. Try again.');
+  }
+}
+
+function buildSystemPrompt() {
+  return `You are an accessibility specialist at a university testing center. Your job is to convert chemistry exam files into clean, Word Read-Aloud-friendly documents.
+
+Word's Read Aloud feature reads text exactly as written. Your converted text must sound natural when spoken aloud.
+
+=== CONVERSION RULES ===
+
+CHEMICAL FORMULAS — spell out every element and number:
+• H2O → "H 2 O"
+• CO2 → "C O 2"
+• O2- → "O 2, 2 minus"  
+• Zn2+ → "Zn 2 plus"
+• Na+ → "Na plus"
+• Al3+ → "Al 3 plus"
+• Mg2+ → "Mg 2 plus"
+• Cl- → "Cl minus"
+• S2- → "S 2 minus"
+• PO4 3- → "P O 4, 3 minus"
+• NO → "N O"
+• NCl3 → "N Cl 3"
+• CCl4 → "C Cl 4"
+• BCl3 → "B Cl 3"
+• BeCl2 → "Be Cl 2"
+• OCl2 → "O Cl 2"
+• XeF2 → "Xe F 2"
+• XeF6 → "Xe F 6"
+• F2 → "F 2"
+
+ELECTRON CONFIGURATIONS — read subshells with commas:
+• 1s22s22p4 → "1s2, 2s2, 2p4"
+• 1s22s22p6 → "1s2, 2s2, 2p6"
+• [Ar]3d10 → "bracket Ar bracket, 3d10"
+• [Ar]4s23d8 → "bracket Ar bracket, 4s2, 3d8"
+• [Ar]3d8 → "bracket Ar bracket, 3d8"
+
+QUANTUM NUMBERS:
+• n=1, l=0, ml=0 → "n equals 1, l equals 0, m-sub-l equals 0"
+• n=3, l=4, ml=+2 → "n equals 3, l equals 4, m-sub-l equals positive 2"
+
+BONDS AND NOTATION:
+• C=O → "C double bond O"
+• C≡N → "C triple bond N"  
+• I-I → "I single bond I"
+• C-F → "C single bond F"
+• Xe-F → "Xe single bond F"
+• F-F → "F single bond F"
+• → → "yields"
+• × → "times"
+• < → "is less than"
+• > → "is greater than"
+• = → "equals"
+
+MATH / SCIENTIFIC NOTATION:
+• 3.7 × 10-18 → "3.7 times 10 to the negative 18"
+• 1x106 → "1 times 10 to the 6th"
+• ΔH°rxn → "delta H degrees rxn"
+• kJ/mol → "kilojoules per mole"
+• IE1 = 1000 → "IE 1 equals 1000"
+• 6.0 m wavelength → "6.0 meters wavelength"
+• MHz → "megahertz"
+
+ORBITAL / HYBRIDIZATION:
+• sp3 → "s p 3"
+• sp2 → "s p 2"
+• sp → "s p"
+• sp3d2 → "s p 3 d 2"
+• sp3d → "s p 3 d"
+• σ bonds → "sigma bonds"
+• π bonds → "pi bonds"
+
+IONIZATION ENERGIES:
+• IE1 = 1000  IE2 = 2250 → "IE 1 equals 1000 kilojoules per mole. IE 2 equals 2250 kilojoules per mole."
+
+ISOELECTRONIC / ION LISTS — read each ion separately:
+• N3-, O2-, F-, Na+, Mg2+ → "N 3 minus, O 2 minus, F minus, Na plus, Mg 2 plus"
+
+ELECTRONEGATIVITY TABLE — read as a sentence:
+• H=2.1, C=2.5, N=3.0, O=3.5 → "The electronegativities are: H equals 2.1, C equals 2.5, N equals 3.0, O equals 3.5."
+
+BOND ENERGY TABLES — read each row:
+• Xe-F 147 → "Xe single bond F: 147 kilojoules per mole"
+• F-F 159 → "F single bond F: 159 kilojoules per mole"
+
+ANSWER CHOICES — each on its own line, labeled clearly:
+• A) 20   B) 50   C) 2.0  →
+  "Option A: 20
+   Option B: 50
+   Option C: 2.0"
+
+ORDERING QUESTIONS (like "place in increasing order"):
+• N  F  As with choices A) N < As < F → Keep the element symbols readable: "N, F, and As" in stem; answer choices as "Option A: N is less than As is less than F"
+
+MULTI-PART QUESTIONS (parts a, b, c, d):
+Label clearly: "Part a:", "Part b:", etc.
+
+QUESTIONS WITH IMAGES (orbital diagrams, Lewis structures, molecular structures):
+The PDF cannot extract images. Add this note in parentheses:
+"(Note to student: refer to the diagram shown on your printed exam for this question.)"
+
+STRIP ENTIRELY:
+• Page numbers (standalone "1", "2", "3", etc.)
+• "Illegal to photocopy or post on the internet"
+• "©2009 ACS DivCHED Exams Institute"  
+• Answer blank lines like "1) ___"
+• Repeated question numbers at end of line like "1) ... 1)"
+• The abbreviations/constants page and periodic table page
+• "MULTIPLE CHOICE. Choose the one alternative..."
+• "Please show your work for the following problems."
+
+=== OUTPUT FORMAT ===
+Return ONLY valid JSON with no markdown fences:
+{
+  "meta": {
+    "title": "exam title e.g. CHM 1010 Exam 4",
+    "course": "course code",
+    "date": "exam date",
+    "instructor": "instructor name if visible"
+  },
+  "questions": [
+    {
+      "number": 1,
+      "type": "multiple_choice",
+      "spoken": "Full speakable question text. Each answer choice on its own line starting with Option A:, Option B:, etc.",
+      "preview": "First 80 chars of question stem only"
+    }
+  ]
+}
+
+Types: "multiple_choice", "free_response", "multi_part"
+Every question must have complete spoken text — do not truncate or summarize.`;
+}
+
+// ── Build DOCX ───────────────────────────────────────────────────────────────
+async function buildDocx(questions, meta) {
+  const zip = new JSZip();
+
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // strip control chars
+      .replace(/\r\n|\r/g, '\n');
+  }
+
+  // Helper: turn a block of text into w:p elements
+  // Splits on newlines, returns array of <w:p> strings
+  function textToParagraphs(text, styleId, extraRpr = '') {
+    const lines = esc(text).split('\n');
+    return lines.map(line => {
+      const t = line.trim();
+      if (!t) return `<w:p><w:pPr><w:pStyle w:val="${styleId}"/></w:pPr></w:p>`;
+      // Detect answer choice lines
+      const isChoice = /^Option [A-E]:/i.test(t);
+      const sid = isChoice ? 'AnswerChoice' : styleId;
+      return `<w:p>
+        <w:pPr><w:pStyle w:val="${sid}"/></w:pPr>
+        <w:r>${extraRpr}<w:t xml:space="preserve">${t}</w:t></w:r>
+      </w:p>`;
+    });
+  }
+
+  // ── [Content_Types].xml ──
+  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+</Types>`);
+
+  // ── _rels/.rels ──
+  zip.folder('_rels').file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+
+  // ── word/_rels/document.xml.rels ──
+  zip.folder('word').folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+</Relationships>`);
+
+  // ── word/settings.xml ──
+  zip.folder('word').file('settings.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:defaultTabStop w:val="720"/>
+  <w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>
+</w:settings>`);
+
+  // ── word/styles.xml ──
+  zip.folder('word').file('styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault><w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>
+      <w:sz w:val="28"/><w:szCs w:val="28"/>
+      <w:lang w:val="en-US"/>
+    </w:rPr></w:rPrDefault>
+    <w:pPrDefault><w:pPr>
+      <w:spacing w:after="160" w:line="288" w:lineRule="auto"/>
+    </w:pPr></w:pPrDefault>
+  </w:docDefaults>
+
+  <w:style w:type="paragraph" w:styleId="Normal" w:default="1">
+    <w:name w:val="Normal"/>
+  </w:style>
+
+  <w:style w:type="paragraph" w:styleId="ExamTitle">
+    <w:name w:val="Exam Title"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:jc w:val="center"/>
+      <w:spacing w:before="0" w:after="80"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+      <w:b/><w:sz w:val="40"/><w:szCs w:val="40"/>
+    </w:rPr>
+  </w:style>
+
+  <w:style w:type="paragraph" w:styleId="ExamMeta">
+    <w:name w:val="Exam Meta"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:jc w:val="center"/>
+      <w:spacing w:before="0" w:after="60"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+      <w:sz w:val="24"/><w:szCs w:val="24"/>
+      <w:color w:val="555555"/>
+    </w:rPr>
+  </w:style>
+
+  <w:style w:type="paragraph" w:styleId="AccessNote">
+    <w:name w:val="Accessibility Note"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:jc w:val="center"/>
+      <w:spacing w:before="120" w:after="400"/>
+      <w:pBdr>
+        <w:bottom w:val="single" w:sz="6" w:space="4" w:color="1F4E79"/>
+      </w:pBdr>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+      <w:i/><w:sz w:val="20"/><w:szCs w:val="20"/>
+      <w:color w:val="1F4E79"/>
+    </w:rPr>
+  </w:style>
+
+  <w:style w:type="paragraph" w:styleId="QuestionHeading">
+    <w:name w:val="Question Heading"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:spacing w:before="400" w:after="100"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+      <w:b/><w:sz w:val="30"/><w:szCs w:val="30"/>
+      <w:color w:val="1F4E79"/>
+    </w:rPr>
+  </w:style>
+
+  <w:style w:type="paragraph" w:styleId="QuestionBody">
+    <w:name w:val="Question Body"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="120"/>
+      <w:ind w:left="360"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+      <w:sz w:val="28"/><w:szCs w:val="28"/>
+    </w:rPr>
+  </w:style>
+
+  <w:style w:type="paragraph" w:styleId="AnswerChoice">
+    <w:name w:val="Answer Choice"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:spacing w:before="40" w:after="40"/>
+      <w:ind w:left="720"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+      <w:sz w:val="26"/><w:szCs w:val="26"/>
+      <w:color w:val="222222"/>
+    </w:rPr>
+  </w:style>
+
+  <w:style w:type="paragraph" w:styleId="FreeResponse">
+    <w:name w:val="Free Response"/>
+    <w:basedOn w:val="Normal"/>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="120"/>
+      <w:ind w:left="360"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
+      <w:sz w:val="28"/><w:szCs w:val="28"/>
+    </w:rPr>
+  </w:style>
+</w:styles>`);
+
+  // ── Build body paragraphs ──
+  const bodyParts = [];
+
+  // Exam header
+  const title = meta.title || 'Chemistry Exam';
+  bodyParts.push(`<w:p>
+    <w:pPr><w:pStyle w:val="ExamTitle"/></w:pPr>
+    <w:r><w:t xml:space="preserve">${esc(title)}</w:t></w:r>
+  </w:p>`);
+
+  const metaLine = [meta.course, meta.date, meta.instructor ? `Instructor: ${meta.instructor}` : '']
+    .filter(Boolean).join('   ·   ');
+  if (metaLine) {
+    bodyParts.push(`<w:p>
+      <w:pPr><w:pStyle w:val="ExamMeta"/></w:pPr>
+      <w:r><w:t xml:space="preserve">${esc(metaLine)}</w:t></w:r>
+    </w:p>`);
+  }
+
+  bodyParts.push(`<w:p>
+    <w:pPr><w:pStyle w:val="AccessNote"/></w:pPr>
+    <w:r><w:t xml:space="preserve">Read-Aloud Version — Office of Accessibility Resources &amp; Services, High Point University — Open in Microsoft Word and use Review &gt; Read Aloud</w:t></w:r>
+  </w:p>`);
+
+  // Questions
+  questions.forEach(q => {
+    const typeLabel = q.type === 'multiple_choice' ? 'Multiple Choice'
+                    : q.type === 'free_response'   ? 'Free Response'
+                    : q.type === 'multi_part'       ? 'Multi-Part'
+                    : '';
+
+    bodyParts.push(`<w:p>
+      <w:pPr><w:pStyle w:val="QuestionHeading"/></w:pPr>
+      <w:r><w:t xml:space="preserve">Question ${q.number}${typeLabel ? ' — ' + typeLabel : ''}</w:t></w:r>
+    </w:p>`);
+
+    // Split spoken text on newlines → individual paragraphs
+    const lines = esc(q.spoken || '').split('\n');
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) continue;
+      const isChoice = /^Option [A-E]:/i.test(t);
+      const sid = isChoice ? 'AnswerChoice' : (q.type === 'free_response' || q.type === 'multi_part' ? 'FreeResponse' : 'QuestionBody');
+      bodyParts.push(`<w:p>
+        <w:pPr><w:pStyle w:val="${sid}"/></w:pPr>
+        <w:r><w:t xml:space="preserve">${t}</w:t></w:r>
+      </w:p>`);
+    }
+  });
+
+  // ── word/document.xml ──
+  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document
+  xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
+  mc:Ignorable="w14">
+  <w:body>
+    ${bodyParts.join('\n    ')}
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
+               w:header="720" w:footer="720" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+  zip.folder('word').file('document.xml', docXml);
+  return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+}
+
+// ── Download ─────────────────────────────────────────────────────────────────
+function downloadDocx() {
+  if (!docxBlob) return;
+  const url = URL.createObjectURL(docxBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = docxFilename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+function setStep(num, state, detail) {
+  const step = document.getElementById(`step${num}`);
+  const dot  = document.getElementById(`dot${num}`);
+  const det  = document.getElementById(`detail${num}`);
+  step.className = 'step ' + state;
+  dot.textContent = state === 'done' ? '✓' : state === 'error' ? '✕' : String(num);
+  det.textContent = detail;
+}
+
+function resetSteps() {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById(`step${i}`).className = 'step';
+    document.getElementById(`dot${i}`).textContent = String(i);
+  }
+}
+
+function showPreview(parsed) {
+  const qs = parsed.questions || [];
+  const meta = parsed.meta || {};
+
+  document.getElementById('previewTitle').textContent =
+    meta.title || 'Exam Ready';
+  document.getElementById('previewMeta').textContent =
+    `${qs.length} question${qs.length !== 1 ? 's' : ''} converted  ·  ${docxFilename}`;
+
+  const list = document.getElementById('qPreviewList');
+  list.innerHTML = '';
+  qs.forEach(q => {
+    const item = document.createElement('div');
+    item.className = 'q-preview-item';
+    item.innerHTML = `
+      <div class="q-preview-num">Question ${q.number} — ${(q.type||'').replace(/_/g,' ')}</div>
+      <div class="q-preview-text">${escapeHtml(q.spoken || '')}</div>
+    `;
+    list.appendChild(item);
+  });
+
+  document.getElementById('previewCard').classList.add('show');
+  document.getElementById('resetLink').classList.add('show');
+  document.getElementById('previewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorCard');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('show');
+  document.getElementById('resetLink').classList.add('show');
+  document.getElementById('progressCard').classList.remove('show');
+}
+
+function hideError() {
+  document.getElementById('errorCard').classList.remove('show');
+  document.getElementById('resetLink').classList.remove('show');
+}
+
+function fullReset() {
+  clearFile();
+  hideError();
+  document.getElementById('progressCard').classList.remove('show');
+  document.getElementById('previewCard').classList.remove('show');
+  document.getElementById('resetLink').classList.remove('show');
+  document.getElementById('convertBtn').disabled = true;
+  docxBlob = null;
+  docxFilename = '';
+  resetSteps();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
