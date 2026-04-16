@@ -2,1109 +2,687 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OARS · Exam Read-Aloud Converter</title>
-
-<!-- CDN Libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Chem Read Aloud — OARS HPU</title>
 <style>
-:root {
-  --bg:       #0b0e13;
-  --surface:  #111520;
-  --card:     #171c28;
-  --border:   #232840;
-  --accent:   #3b82f6;
-  --accent-g: #10b981;
-  --accent-y: #f59e0b;
-  --text:     #e2e8f0;
-  --muted:    #64748b;
-  --danger:   #ef4444;
-  --radius:   10px;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'IBM Plex Sans', sans-serif;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ── Header ── */
-.header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0 32px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-}
-.header-icon {
-  width: 34px; height: 34px;
-  background: var(--accent);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 17px;
-  flex-shrink: 0;
-}
-.header-title {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-.header-sub {
-  font-size: 12px;
-  color: var(--muted);
-  margin-left: 4px;
-}
-.header-tag {
-  margin-left: auto;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  padding: 2px 8px;
-  border-radius: 4px;
-  letter-spacing: 1px;
-}
-
-/* ── Main layout ── */
-.main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 40px 24px 60px;
-  gap: 24px;
-  max-width: 760px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* ── Upload card ── */
-.upload-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px;
-  width: 100%;
-}
-
-.card-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  color: var(--accent);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 16px;
-}
-
-.drop-zone {
-  border: 2px dashed var(--border);
-  border-radius: 8px;
-  padding: 40px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-  background: var(--card);
-}
-.drop-zone:hover, .drop-zone.over {
-  border-color: var(--accent);
-  background: #3b82f610;
-}
-.drop-zone input[type="file"] {
-  position: absolute; inset: 0;
-  opacity: 0; cursor: pointer; width: 100%; height: 100%;
-}
-.drop-icon { font-size: 40px; margin-bottom: 12px; }
-.drop-title {
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: 6px;
-}
-.drop-sub {
-  font-size: 13px;
-  color: var(--muted);
-}
-.drop-sub strong { color: var(--accent); }
-
-/* File loaded state */
-.file-loaded {
-  display: none;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-top: 14px;
-}
-.file-loaded.show { display: flex; }
-.file-icon { font-size: 24px; flex-shrink: 0; }
-.file-info { flex: 1; min-width: 0; }
-.file-name {
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.file-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.file-clear {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: color 0.15s;
-  flex-shrink: 0;
-}
-.file-clear:hover { color: var(--danger); }
-
-/* ── Convert button ── */
-.convert-btn {
-  width: 100%;
-  margin-top: 20px;
-  padding: 16px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-.convert-btn:hover:not(:disabled) { background: #2563eb; }
-.convert-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── Progress card ── */
-.progress-card {
-  display: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 28px 32px;
-  width: 100%;
-}
-.progress-card.show { display: block; }
-
-.steps { display: flex; flex-direction: column; gap: 0; }
-
-.step {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-  position: relative;
-}
-.step:last-child { border-bottom: none; }
-
-.step-dot {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px;
-  font-family: 'IBM Plex Mono', monospace;
-  flex-shrink: 0;
-  transition: all 0.3s;
-  background: var(--card);
-  margin-top: 2px;
-}
-.step.active .step-dot {
-  border-color: var(--accent);
-  color: var(--accent);
-  animation: pulse-dot 1.2s ease-in-out infinite;
-}
-.step.done .step-dot {
-  border-color: var(--accent-g);
-  background: var(--accent-g);
-  color: white;
-}
-.step.error .step-dot {
-  border-color: var(--danger);
-  background: var(--danger);
-  color: white;
-}
-@keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 0 #3b82f640; }
-  50% { box-shadow: 0 0 0 6px #3b82f600; }
-}
-
-.step-content { flex: 1; }
-.step-title {
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 3px;
-}
-.step.active .step-title { color: var(--accent); }
-.step.done .step-title { color: var(--accent-g); }
-.step-detail {
-  font-size: 12px;
-  color: var(--muted);
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-/* ── Preview card ── */
-.preview-card {
-  display: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 28px 32px;
-  width: 100%;
-}
-.preview-card.show { display: block; }
-
-.preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.preview-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-.preview-meta {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 3px;
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-.download-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: var(--accent-g);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-.download-btn:hover { background: #059669; }
-
-.q-preview-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 420px;
-  overflow-y: auto;
-  margin-top: 4px;
-}
-.q-preview-list::-webkit-scrollbar { width: 4px; }
-.q-preview-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-.q-preview-item {
-  padding: 12px 16px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  transition: all 0.15s;
-}
-.q-preview-item:hover {
-  background: var(--card);
-  border-color: var(--border);
-}
-.q-preview-num {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
-  color: var(--accent);
-  margin-bottom: 4px;
-}
-.q-preview-text {
-  font-size: 13px;
-  color: var(--text);
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-/* ── Error ── */
-.error-card {
-  display: none;
-  background: #1a0a0a;
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  padding: 20px 24px;
-  width: 100%;
-  font-size: 13px;
-  color: var(--danger);
-}
-.error-card.show { display: block; }
-
-/* ── Reset link ── */
-.reset-link {
-  font-size: 13px;
-  color: var(--muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
-  margin-top: 8px;
-  display: none;
-}
-.reset-link.show { display: inline; }
-.reset-link:hover { color: var(--text); }
-
-/* ── Info box ── */
-.info-box {
-  width: 100%;
-  padding: 16px 20px;
-  background: #0f1a2e;
-  border: 1px solid #1d3a6e;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #93c5fd;
-  line-height: 1.6;
-}
-.info-box strong { color: #bfdbfe; }
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F7F5F0;--card:#fff;--bd:#E2DDD6;--tx:#18160F;--mu:#8C8880;--gr:#1B4332;--gl:#EAF2ED;--gm:#2D6A4F;--am:#92400E;--ab:#FEF3C7;--rd:#991B1B;--rb:#FEF2F2;--bl:#1E3A5F;--blb:#EFF6FF}
+html,body{min-height:100vh;background:var(--bg);font-family:'Lato',sans-serif;color:var(--tx)}
+.wrap{max-width:740px;margin:0 auto;padding:3rem 1.5rem 6rem}
+header{margin-bottom:2rem}
+.eye{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--gm);margin-bottom:.5rem}
+h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;line-height:1.05}
+h1 span{color:var(--gm)}
+.sub{margin-top:.4rem;font-size:13px;color:var(--mu);line-height:1.6;max-width:540px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:1.3rem;margin-bottom:1rem}
+.clbl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:.8rem}
+.drop{border:2px dashed var(--bd);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);position:relative}
+.drop:hover,.drop.over{border-color:var(--gm);background:var(--gl)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-i{font-size:1.8rem;margin-bottom:.4rem}
+.drop-m{font-size:14px;font-weight:700}
+.drop-s{font-size:12px;color:var(--mu);margin-top:.3rem}
+.fpill{display:none;align-items:center;gap:8px;background:var(--gl);border:1px solid var(--gm);border-radius:7px;padding:.5rem .9rem;margin-top:.7rem;font-size:12px}
+.fpill.show{display:flex}
+.fpill .fn{font-family:'DM Mono',monospace;color:var(--gr);font-weight:500;flex:1;word-break:break-all}
+.fpill button{background:none;border:none;cursor:pointer;color:var(--mu);padding:2px 4px;font-size:14px}
+.err{display:none;background:var(--rb);border:1px solid #FCA5A5;border-radius:8px;padding:.7rem 1rem;margin-top:.7rem;font-size:13px;color:var(--rd)}
+.err.show{display:block}
+.btn-go{width:100%;padding:.9rem;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff;background:var(--gr);border:none;border-radius:10px;cursor:pointer;margin-top:1rem;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-go:hover:not(:disabled){background:var(--gm)}
+.btn-go:disabled{background:var(--bd);color:var(--mu);cursor:not-allowed}
+.prog{display:none;margin-top:1rem}
+.prog.show{display:block}
+.pb-bg{background:var(--bd);border-radius:4px;height:5px;overflow:hidden;margin-bottom:.4rem}
+.pb{height:100%;background:var(--gm);border-radius:4px;transition:width .3s;width:0%}
+.pl{font-size:11.5px;color:var(--mu);font-family:'DM Mono',monospace}
+.review{display:none;margin-top:1rem}
+.review.show{display:block}
+.rh{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem}
+.rt{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700}
+.rc{font-family:'DM Mono',monospace;font-size:11px;color:var(--mu)}
+.rnote{font-size:12.5px;color:var(--mu);background:var(--bg);border:1px solid var(--bd);border-radius:7px;padding:.55rem .85rem;margin-bottom:.85rem;line-height:1.6}
+.qtable{width:100%;border-collapse:collapse;display:block;max-height:520px;overflow-y:auto}
+.qtable tr{border-bottom:1px solid var(--bg)}
+.qtable td{padding:5px 4px;vertical-align:top}
+.qtable .qnum{font-family:'DM Mono',monospace;font-size:10px;color:var(--mu);white-space:nowrap;width:32px;padding-top:9px}
+.qtable textarea{width:100%;font-size:13px;font-family:'Lato',sans-serif;padding:5px 8px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--tx);resize:vertical;min-height:52px;display:block;box-sizing:border-box;line-height:1.5}
+.qtable textarea:focus{outline:none;border-color:var(--gm)}
+.qtable textarea.ed{border-color:#3B82F6;background:#EFF6FF}
+.ract{display:flex;gap:.7rem;margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--bd)}
+.btn-exp{flex:1;padding:.75rem;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;background:var(--gr);border:none;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .2s}
+.btn-exp:hover{background:var(--gm)}
+.btn-rst{padding:.75rem 1rem;font-family:'Lato',sans-serif;font-size:13px;color:var(--mu);background:transparent;border:1px solid var(--bd);border-radius:9px;cursor:pointer}
+.dlrow{display:none;align-items:center;gap:10px;margin-top:.8rem;padding:.75rem 1rem;background:var(--gl);border:1px solid var(--gm);border-radius:9px}
+.dlrow.show{display:flex}
+.btn-dl{display:inline-flex;align-items:center;gap:6px;padding:.5rem 1.2rem;background:var(--gr);color:#fff;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none}
+.dli{font-size:12px;color:var(--mu);font-family:'DM Mono',monospace;flex:1}
+.qtag{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.qtag.mc{background:#DBEAFE;color:#1E3A5F}
+.qtag.fr{background:var(--ab);color:var(--am)}
+.qtag.mp{background:var(--gl);color:var(--gr)}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<div class="header">
-  <div class="header-icon">📄</div>
-  <div>
-    <div class="header-title">OARS · Exam Read-Aloud Converter</div>
+<header>
+  <div class="eye">OARS · High Point University · Accessibility</div>
+  <h1>Chem <span>Read Aloud</span></h1>
+  <p class="sub">Upload a PDF or Word exam from Accommodate. The tool converts chemistry notation, formulas, and symbols into clean spoken language, then exports a .docx ready for Word's Read Aloud feature.</p>
+</header>
+
+<div class="card">
+  <div class="clbl">Exam File</div>
+  <div class="drop" id="drop">
+    <input type="file" id="fi" accept=".pdf,.docx">
+    <div class="drop-i">📄</div>
+    <div class="drop-m">Drop PDF or .docx here, or click to browse</div>
+    <div class="drop-s">Chemistry exam downloaded from Accommodate</div>
   </div>
-  <span class="header-sub">High Point University</span>
-  <div class="header-tag">OARS TOOL</div>
+  <div class="fpill" id="fpill"><span id="ficon">📝</span><span class="fn" id="fn"></span><button onclick="clearFile()">✕</button></div>
+  <div class="err" id="err"></div>
 </div>
 
-<div class="main">
+<button class="btn-go" id="btnGo" onclick="run()" disabled>⚡ Extract &amp; Review</button>
 
-  <!-- Info -->
-  <div class="info-box">
-    <strong>How it works:</strong> Upload a PDF or DOCX exam from Accommodate. Claude converts all chemistry notation, formulas, and symbols into clean spoken language, then exports a Word document (.docx) ready for a student to open and use with Word's <strong>Read Aloud</strong> feature.
-  </div>
+<div class="prog" id="prog">
+  <div class="pb-bg"><div class="pb" id="pb"></div></div>
+  <div class="pl" id="pl">Loading…</div>
+</div>
 
-  <!-- Upload -->
-  <div class="upload-card">
-    <div class="card-label">Step 1 — Upload Exam</div>
-
-    <div class="drop-zone" id="dropZone">
-      <input type="file" id="fileInput" accept=".pdf,.docx" onchange="onFileSelected(this.files[0])">
-      <div class="drop-icon">📂</div>
-      <div class="drop-title">Drop exam file here</div>
-      <div class="drop-sub">or click to browse &nbsp;·&nbsp; <strong>PDF</strong> or <strong>DOCX</strong></div>
+<div class="review" id="review">
+  <div class="card">
+    <div class="rh">
+      <span class="rt">Review Converted Questions</span>
+      <span class="rc" id="rc"></span>
     </div>
-
-    <div class="file-loaded" id="fileLoaded">
-      <div class="file-icon" id="fileIcon">📄</div>
-      <div class="file-info">
-        <div class="file-name" id="fileName"></div>
-        <div class="file-size" id="fileSize"></div>
-      </div>
-      <button class="file-clear" onclick="clearFile()" title="Remove file">✕</button>
-    </div>
-
-    <button class="convert-btn" id="convertBtn" onclick="startConversion()" disabled>
-      ⚡ Convert to Read-Aloud DOCX
-    </button>
-  </div>
-
-  <!-- Progress -->
-  <div class="progress-card" id="progressCard">
-    <div class="card-label">Step 2 — Converting</div>
-    <div class="steps">
-      <div class="step" id="step1">
-        <div class="step-dot" id="dot1">1</div>
-        <div class="step-content">
-          <div class="step-title">Extracting exam text</div>
-          <div class="step-detail" id="detail1">Reading PDF or DOCX content...</div>
-        </div>
-      </div>
-      <div class="step" id="step2">
-        <div class="step-dot" id="dot2">2</div>
-        <div class="step-content">
-          <div class="step-title">Converting with Claude</div>
-          <div class="step-detail" id="detail2">Translating chemistry notation to spoken language...</div>
-        </div>
-      </div>
-      <div class="step" id="step3">
-        <div class="step-dot" id="dot3">3</div>
-        <div class="step-content">
-          <div class="step-title">Building Word document</div>
-          <div class="step-detail" id="detail3">Assembling accessible DOCX file...</div>
-        </div>
-      </div>
+    <div class="rnote">Each question has been converted for Word Read Aloud. Edit any line before exporting — changes are saved automatically.</div>
+    <table class="qtable" id="qtable"></table>
+    <div class="ract">
+      <button class="btn-rst" onclick="resetAll()">↺ Reset</button>
+      <button class="btn-exp" onclick="exportDoc()">⬇ Export .docx</button>
     </div>
   </div>
-
-  <!-- Error -->
-  <div class="error-card" id="errorCard"></div>
-  <button class="reset-link" id="resetLink" onclick="fullReset()">← Start over</button>
-
-  <!-- Preview + Download -->
-  <div class="preview-card" id="previewCard">
-    <div class="preview-header">
-      <div>
-        <div class="preview-title" id="previewTitle">Ready to Download</div>
-        <div class="preview-meta" id="previewMeta"></div>
-      </div>
-      <button class="download-btn" id="downloadBtn" onclick="downloadDocx()">
-        ⬇ Download DOCX
-      </button>
-    </div>
-    <div class="card-label">Preview — Converted Questions</div>
-    <div class="q-preview-list" id="qPreviewList"></div>
+  <div class="dlrow" id="dlrow">
+    <a class="btn-dl" id="dlbtn" href="#">⬇ Download</a>
+    <span class="dli" id="dli"></span>
   </div>
+</div>
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
 <script>
-// ── Config ──────────────────────────────────────────────────────────────────
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+'use strict';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── State ────────────────────────────────────────────────────────────────────
-let currentFile = null;
-let docxBlob = null;
-let docxFilename = '';
+// ── State ─────────────────────────────────────────────────────────────────────
+var gFile = null;
+var gQuestions = []; // [{number, type, spoken}]
+var gMeta = {};      // {title, course, date}
 
-// ── Drag & drop ──────────────────────────────────────────────────────────────
-const dz = document.getElementById('dropZone');
-dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-dz.addEventListener('drop', e => {
-  e.preventDefault(); dz.classList.remove('over');
-  const f = e.dataTransfer.files[0];
-  if (f) onFileSelected(f);
+// ── File handling ─────────────────────────────────────────────────────────────
+var drop = document.getElementById('drop');
+var fi   = document.getElementById('fi');
+drop.addEventListener('dragover',  function(e){e.preventDefault();drop.classList.add('over')});
+drop.addEventListener('dragleave', function(){drop.classList.remove('over')});
+drop.addEventListener('drop', function(e){
+  e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
 });
+fi.addEventListener('change', function(){ if(fi.files[0]) setFile(fi.files[0]); });
 
-function onFileSelected(file) {
-  if (!file) return;
-  if (!/\.(pdf|docx)$/i.test(file.name)) {
-    showError('Please upload a PDF or DOCX file.');
-    return;
-  }
-  currentFile = file;
-  document.getElementById('fileName').textContent = file.name;
-  document.getElementById('fileSize').textContent = formatBytes(file.size);
-  document.getElementById('fileIcon').textContent = file.name.endsWith('.pdf') ? '📕' : '📘';
-  document.getElementById('fileLoaded').classList.add('show');
-  document.getElementById('convertBtn').disabled = false;
-  hideError();
+function setFile(f) {
+  if (!/\.(pdf|docx)$/i.test(f.name)) { showErr('Please upload a PDF or .docx file.'); return; }
+  gFile = f;
+  document.getElementById('fn').textContent = f.name;
+  document.getElementById('ficon').textContent = /\.pdf$/i.test(f.name) ? '📕' : '📘';
+  document.getElementById('fpill').classList.add('show');
+  document.getElementById('btnGo').disabled = false;
+  hideErr();
 }
 
 function clearFile() {
-  currentFile = null;
-  document.getElementById('fileInput').value = '';
-  document.getElementById('fileLoaded').classList.remove('show');
-  document.getElementById('convertBtn').disabled = true;
+  gFile = null; fi.value = '';
+  document.getElementById('fpill').classList.remove('show');
+  document.getElementById('btnGo').disabled = true;
 }
 
-function formatBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  return (b/1048576).toFixed(1) + ' MB';
-}
-
-// ── Conversion pipeline ──────────────────────────────────────────────────────
-async function startConversion() {
-  if (!currentFile) return;
-
-  // Reset UI
-  hideError();
-  document.getElementById('previewCard').classList.remove('show');
-  document.getElementById('progressCard').classList.add('show');
-  document.getElementById('convertBtn').disabled = true;
-  resetSteps();
+// ── Main run ──────────────────────────────────────────────────────────────────
+async function run() {
+  if (!gFile) return;
+  hideErr();
+  document.getElementById('review').classList.remove('show');
+  document.getElementById('dlrow').classList.remove('show');
+  document.getElementById('prog').classList.add('show');
+  document.getElementById('btnGo').disabled = true;
 
   try {
-    // Step 1: Extract text
-    setStep(1, 'active', `Reading ${currentFile.name}...`);
-    const rawText = currentFile.name.endsWith('.pdf')
-      ? await extractPDF(currentFile)
-      : await extractDOCX(currentFile);
-    setStep(1, 'done', `${rawText.length.toLocaleString()} characters extracted`);
+    setP(5, 'Reading file…');
+    var rawText = /\.pdf$/i.test(gFile.name)
+      ? await extractPDF(gFile)
+      : await extractDOCX(gFile);
 
-    // Step 2: Claude conversion
-    setStep(2, 'active', 'Sending to Claude — converting chemistry notation...');
-    const parsed = await convertWithClaude(rawText, currentFile.name);
-    const qCount = parsed.questions.length;
-    setStep(2, 'done', `${qCount} question${qCount !== 1 ? 's' : ''} converted`);
+    setP(35, 'Parsing questions…');
+    var parsed = parseExam(rawText);
+    gMeta      = parsed.meta;
+    gQuestions = parsed.questions;
 
-    // Step 3: Build DOCX
-    setStep(3, 'active', 'Building Word document...');
-    const buffer = await buildDocx(parsed.questions, parsed.meta || {});
-    docxBlob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    });
-    const base = currentFile.name.replace(/\.(pdf|docx)$/i, '');
-    docxFilename = base + '_ReadAloud.docx';
-    setStep(3, 'done', `${docxFilename} ready`);
+    if (!gQuestions.length) throw new Error('No questions found. The file may be image-only or scanned — text must be selectable.');
 
-    // Show preview
-    showPreview(parsed);
+    setP(70, 'Converting chemistry notation…');
+    gQuestions.forEach(function(q){ q.spoken = convertToSpoken(q.raw); });
 
-  } catch (err) {
-    showError(err.message || String(err));
+    setP(95, 'Building review…');
+    await tick();
+    buildReview();
+    setP(100, 'Done — review and edit below.');
+    setTimeout(function(){ document.getElementById('prog').classList.remove('show'); }, 1200);
+    document.getElementById('review').classList.add('show');
+    document.getElementById('review').scrollIntoView({behavior:'smooth', block:'start'});
+
+  } catch(e) {
+    document.getElementById('prog').classList.remove('show');
+    document.getElementById('btnGo').disabled = false;
+    showErr(e.message || String(e));
   }
 }
 
-// ── Text extraction ──────────────────────────────────────────────────────────
+// ── PDF extraction ────────────────────────────────────────────────────────────
 async function extractPDF(file) {
-  const ab = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-  let out = '';
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    // Reconstruct text preserving line structure based on y-position
-    const items = content.items;
-    let lastY = null;
-    let line = '';
-    for (const item of items) {
-      const y = item.transform[5];
-      if (lastY !== null && Math.abs(y - lastY) > 3) {
-        out += line.trim() + '\n';
+  var ab  = await file.arrayBuffer();
+  var pdf = await pdfjsLib.getDocument({data: ab}).promise;
+  var out = '';
+  for (var i = 1; i <= pdf.numPages; i++) {
+    var page    = await pdf.getPage(i);
+    var content = await page.getTextContent();
+    var items   = content.items;
+    var lastY   = null;
+    var line    = '';
+    for (var j = 0; j < items.length; j++) {
+      var item = items[j];
+      var y    = Math.round(item.transform[5]);
+      if (lastY !== null && Math.abs(y - lastY) > 2) {
+        out += line + '\n';
         line = '';
       }
-      line += item.str;
-      lastY = y;
+      line  += item.str;
+      lastY  = y;
     }
-    if (line.trim()) out += line.trim() + '\n';
+    if (line.trim()) out += line + '\n';
     out += '\n';
   }
   return out;
 }
 
+// ── DOCX extraction ───────────────────────────────────────────────────────────
 async function extractDOCX(file) {
-  const ab = await file.arrayBuffer();
-  const result = await mammoth.extractRawText({ arrayBuffer: ab });
+  var ab     = await file.arrayBuffer();
+  var result = await mammoth.extractRawText({arrayBuffer: ab});
   return result.value;
 }
 
-// ── Claude API ───────────────────────────────────────────────────────────────
-async function convertWithClaude(rawText, filename) {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 8000,
-      system: buildSystemPrompt(),
-      messages: [{
-        role: 'user',
-        content: `Convert this exam for Word Read Aloud. File: ${filename}\n\n${rawText.slice(0, 14000)}`
-      }]
-    })
+// ── Exam parser ───────────────────────────────────────────────────────────────
+// Handles the fragmented lines PDF.js produces (superscripts on own lines, etc.)
+function parseExam(raw) {
+  // Step 1: Join fragmented superscript/subscript tokens
+  // PDF extracts things like "Na\n+\n" — rejoin them
+  var text = raw;
+
+  // Remove junk lines
+  text = text.replace(/illegal to photocopy[^\n]*/gi, '');
+  text = text.replace(/©\d{4}[^\n]*/g, '');
+  text = text.replace(/Page \d+\s*\n/gi, '');
+  text = text.replace(/MULTIPLE CHOICE[^\n]*/gi, '');
+  text = text.replace(/Choose the one alternative[^\n]*/gi, '');
+  text = text.replace(/Please show your work[^\n]*/gi, '');
+
+  // Collapse runs of blank lines to single blank
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // Detect exam meta from first ~300 chars
+  var meta = {title:'', course:'', date:''};
+  var metaBlock = text.slice(0, 400);
+  var courseM = metaBlock.match(/([A-Z]{2,4}\s*\d{3,4}[^\n]*exam[^\n]*)/i);
+  if (courseM) meta.title = courseM[1].trim();
+  var dateM = metaBlock.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)[^\n]*/i);
+  if (dateM) meta.date = dateM[0].trim();
+
+  // Split into question blocks
+  // A question starts with a number followed by ) at line start
+  var lines    = text.split('\n');
+  var questions = [];
+  var current  = null;
+  var qNumRe   = /^\s*(\d{1,2})\s*\)/;
+  // Also detect free-response starters like "29)" at beginning of line
+  var frRe     = /^\s*(\d{1,2})\s*\)\s*\S/;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    var m    = line.match(qNumRe);
+
+    // Skip lines that are just a standalone number (page numbers, duplicate Q numbers)
+    if (/^\s*\d{1,2}\s*$/.test(line)) continue;
+
+    if (m) {
+      var qn = parseInt(m[1], 10);
+      // Avoid false positives: don't start new Q if number < current or > current+1 by a lot
+      if (current && (qn < current.number || qn > current.number + 2)) {
+        // Treat as continuation
+        current.raw += '\n' + line;
+        continue;
+      }
+      if (current) questions.push(current);
+      current = {
+        number: qn,
+        type:   'multiple_choice',
+        raw:    line.replace(qNumRe, '').trim(),
+        choices: []
+      };
+    } else if (current) {
+      current.raw += '\n' + line;
+    }
+  }
+  if (current) questions.push(current);
+
+  // Detect type and clean each question
+  questions.forEach(function(q) {
+    var r = q.raw;
+    // Detect free response (has "pts", "draw", "use the bond", "estimate")
+    if (/\d\s*pts?|\bdraw\b|\buse the bond|\bestimate\b|\bshow your work/i.test(r)) {
+      q.type = r.match(/\b[a-d]\s*\)/i) ? 'multi_part' : 'free_response';
+    }
+    // Detect if has A) B) C) choices
+    if (/[A-E]\s*\)\s*\S/.test(r)) q.type = 'multiple_choice';
   });
 
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(`Claude API error ${resp.status}: ${err.error?.message || 'Unknown error'}`);
-  }
-
-  const data = await resp.json();
-  const raw = data.content.map(b => b.text || '').join('');
-  const clean = raw.replace(/```json[\s\S]*?```/g, m => m.slice(7, -3))
-                   .replace(/^```|```$/gm, '').trim();
-  try {
-    return JSON.parse(clean);
-  } catch(e) {
-    // Try to extract JSON from the response
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error('Could not parse Claude response as JSON. Try again.');
-  }
+  return {meta: meta, questions: questions};
 }
 
-function buildSystemPrompt() {
-  return `You are an accessibility specialist at a university testing center. Your job is to convert chemistry exam files into clean, Word Read-Aloud-friendly documents.
+// ── Chemistry → Spoken converter ──────────────────────────────────────────────
+function convertToSpoken(raw) {
+  if (!raw) return '';
+  var t = raw;
 
-Word's Read Aloud feature reads text exactly as written. Your converted text must sound natural when spoken aloud.
+  // ── 1. Normalise whitespace artifacts from PDF extraction ──
+  // Rejoin broken superscripts: "Na\n+" → "Na+" etc.
+  // Lines that are just a charge/number sitting alone get merged up
+  t = t.replace(/\n([+\-]\d*|\d+[+\-])\n/g, ' $1 ');
+  t = t.replace(/\n([+\-])\s*\n/g, '$1\n');
 
-=== CONVERSION RULES ===
+  // ── 2. Strip answer-blank markers like "1) ___" at end of line ──
+  t = t.replace(/\d{1,2}\)\s*$\n?/gm, '');
 
-CHEMICAL FORMULAS — spell out every element and number:
-• H2O → "H 2 O"
-• CO2 → "C O 2"
-• O2- → "O 2, 2 minus"  
-• Zn2+ → "Zn 2 plus"
-• Na+ → "Na plus"
-• Al3+ → "Al 3 plus"
-• Mg2+ → "Mg 2 plus"
-• Cl- → "Cl minus"
-• S2- → "S 2 minus"
-• PO4 3- → "P O 4, 3 minus"
-• NO → "N O"
-• NCl3 → "N Cl 3"
-• CCl4 → "C Cl 4"
-• BCl3 → "B Cl 3"
-• BeCl2 → "Be Cl 2"
-• OCl2 → "O Cl 2"
-• XeF2 → "Xe F 2"
-• XeF6 → "Xe F 6"
-• F2 → "F 2"
+  // ── 3. Electron configurations ──
+  // [Ar]4s23d8 style
+  t = t.replace(/\[([A-Z][a-z]?)\](\S+)/g, function(_, noble, rest){
+    return 'bracket ' + noble + ' bracket, ' + spellConfig(rest);
+  });
+  // bare config like 1s22s22p6
+  t = t.replace(/\b((?:\d[spdf]\d+,?\s*){2,})/g, function(_, c){ return spellConfig(c); });
 
-ELECTRON CONFIGURATIONS — read subshells with commas:
-• 1s22s22p4 → "1s2, 2s2, 2p4"
-• 1s22s22p6 → "1s2, 2s2, 2p6"
-• [Ar]3d10 → "bracket Ar bracket, 3d10"
-• [Ar]4s23d8 → "bracket Ar bracket, 4s2, 3d8"
-• [Ar]3d8 → "bracket Ar bracket, 3d8"
+  // ── 4. Quantum numbers ──
+  t = t.replace(/\bml\s*=\s*([+\-]?\d+)/g, 'm-sub-l equals $1');
+  t = t.replace(/\bml\s*=\s*0/g, 'm-sub-l equals 0');
+  t = t.replace(/\bl\s*=\s*(\d)/g, 'l equals $1');
+  t = t.replace(/\bn\s*=\s*(\d)/g, 'n equals $1');
 
-QUANTUM NUMBERS:
-• n=1, l=0, ml=0 → "n equals 1, l equals 0, m-sub-l equals 0"
-• n=3, l=4, ml=+2 → "n equals 3, l equals 4, m-sub-l equals positive 2"
+  // ── 5. Hybridisation ──
+  t = t.replace(/\bsp3d2\b/g, 's p 3 d 2');
+  t = t.replace(/\bsp3d\b/g,  's p 3 d');
+  t = t.replace(/\bsp3\b/g,   's p 3');
+  t = t.replace(/\bsp2\b/g,   's p 2');
+  t = t.replace(/\bsp\b/g,    's p');
 
-BONDS AND NOTATION:
-• C=O → "C double bond O"
-• C≡N → "C triple bond N"  
-• I-I → "I single bond I"
-• C-F → "C single bond F"
-• Xe-F → "Xe single bond F"
-• F-F → "F single bond F"
-• → → "yields"
-• × → "times"
-• < → "is less than"
-• > → "is greater than"
-• = → "equals"
+  // ── 6. Bonds ──
+  t = t.replace(/C\s*[=≡X]\s*N/g,  'C triple bond N');
+  t = t.replace(/C\s*=\s*O/g,       'C double bond O');
+  t = t.replace(/([A-Z][a-z]?)\s*-\s*([A-Z][a-z]?)/g, function(_, a, b){
+    return a + ' single bond ' + b;
+  });
 
-MATH / SCIENTIFIC NOTATION:
-• 3.7 × 10-18 → "3.7 times 10 to the negative 18"
-• 1x106 → "1 times 10 to the 6th"
-• ΔH°rxn → "delta H degrees rxn"
-• kJ/mol → "kilojoules per mole"
-• IE1 = 1000 → "IE 1 equals 1000"
-• 6.0 m wavelength → "6.0 meters wavelength"
-• MHz → "megahertz"
+  // ── 7. Chemical formulas — common named compounds first ──
+  var namedCompounds = {
+    'XeF6':'Xe F 6', 'XeF2':'Xe F 2',
+    'POCl3':'P O Cl 3', 'ClO3':'Cl O 3',
+    'OCl2':'O Cl 2',
+    'NCl3':'N Cl 3',  'CCl4':'C Cl 4',  'BCl3':'B Cl 3',  'BeCl2':'Be Cl 2',
+    'NO':'N O',  'CO2':'C O 2',  'H2O':'H 2 O',
+    'PO4':'P O 4',  'SO4':'S O 4',  'NO3':'N O 3',  'OH':'O H',
+    'NH3':'N H 3', 'CH4':'C H 4', 'HCl':'H Cl', 'H2SO4':'H 2 S O 4',
+    'NaCl':'Na Cl', 'KCl':'K Cl', 'MgO':'Mg O', 'CaO':'Ca O',
+    'F2':'F 2', 'Cl2':'Cl 2', 'Br2':'Br 2', 'I2':'I 2', 'O2':'O 2', 'N2':'N 2', 'H2':'H 2'
+  };
+  Object.keys(namedCompounds).forEach(function(k){
+    t = t.replace(new RegExp('\\b' + escRe(k) + '\\b','g'), namedCompounds[k]);
+  });
 
-ORBITAL / HYBRIDIZATION:
-• sp3 → "s p 3"
-• sp2 → "s p 2"
-• sp → "s p"
-• sp3d2 → "s p 3 d 2"
-• sp3d → "s p 3 d"
-• σ bonds → "sigma bonds"
-• π bonds → "pi bonds"
+  // ── 8. Ionic charges (after formula substitution) ──
+  // Patterns like Na+, Al3+, Mg2+, Cl-, S2-, N3-, O2-
+  t = t.replace(/([A-Z][a-z]?)(\d+)\s*\+/g, '$1 $2 plus');
+  t = t.replace(/([A-Z][a-z]?)\s*\+/g,      '$1 plus');
+  t = t.replace(/([A-Z][a-z]?)(\d+)\s*-/g,  '$1 $2 minus');
+  t = t.replace(/([A-Z][a-z]?)\s*-/g,        '$1 minus');
 
-IONIZATION ENERGIES:
-• IE1 = 1000  IE2 = 2250 → "IE 1 equals 1000 kilojoules per mole. IE 2 equals 2250 kilojoules per mole."
+  // ── 9. Scientific notation ──
+  t = t.replace(/(\d[\d.]*)\s*[×x\*]\s*10\s*-\s*(\d+)/g, '$1 times 10 to the negative $2');
+  t = t.replace(/(\d[\d.]*)\s*[×x\*]\s*10\s*\+?\s*(\d+)/g, '$1 times 10 to the $2');
+  t = t.replace(/1\s*x\s*10\s*(\d+)/g, '1 times 10 to the $1');
 
-ISOELECTRONIC / ION LISTS — read each ion separately:
-• N3-, O2-, F-, Na+, Mg2+ → "N 3 minus, O 2 minus, F minus, Na plus, Mg 2 plus"
+  // ── 10. Math symbols ──
+  t = t.replace(/×/g, ' times ');
+  t = t.replace(/→|⟶|\x0f/g, ' yields ');
+  t = t.replace(/ΔH/g, 'delta H');
+  t = t.replace(/Δ/g,  'delta ');
+  t = t.replace(/°/g,  ' degrees ');
+  t = t.replace(/≥/g,  ' greater than or equal to ');
+  t = t.replace(/≤/g,  ' less than or equal to ');
+  t = t.replace(/\bσ\b/g, 'sigma');
+  t = t.replace(/\bπ\b/g, 'pi');
+  t = t.replace(/\bλ\b/g, 'lambda');
+  t = t.replace(/\bν\b/g, 'nu');
+  t = t.replace(/\bΗ\b/g, 'sigma');  // exam used Η for sigma bonds
+  t = t.replace(/°rxn/g,  'degrees rxn');
 
-ELECTRONEGATIVITY TABLE — read as a sentence:
-• H=2.1, C=2.5, N=3.0, O=3.5 → "The electronegativities are: H equals 2.1, C equals 2.5, N equals 3.0, O equals 3.5."
+  // ── 11. Ionisation energy shorthand ──
+  // IE1 = 1000  IE2 = 2250  etc.
+  t = t.replace(/IE\s*(\d)\s*=\s*([\d,]+)/g, 'IE $1 equals $2 kilojoules per mole');
 
-BOND ENERGY TABLES — read each row:
-• Xe-F 147 → "Xe single bond F: 147 kilojoules per mole"
-• F-F 159 → "F single bond F: 159 kilojoules per mole"
+  // ── 12. Units ──
+  t = t.replace(/\bkJ\/mol\b/g,  'kilojoules per mole');
+  t = t.replace(/\bJ\/mol\b/g,   'joules per mole');
+  t = t.replace(/\bkJ\b/g,       'kilojoules');
+  t = t.replace(/\bMHz\b/g,      'megahertz');
+  t = t.replace(/\bnm\b/g,       'nanometers');
+  t = t.replace(/\bm\b(?=\s+wavelength|\s*\(|\s*\.)/, 'meters');
+  t = t.replace(/\bs-1\b|\bs\^-1\b|\bs−1\b/g, 'per second');
+  t = t.replace(/\bHz\b/g,       'hertz');
+  t = t.replace(/\batm\b/g,      'atmospheres');
+  t = t.replace(/\bmmHg\b/g,     'millimeters of mercury');
 
-ANSWER CHOICES — each on its own line, labeled clearly:
-• A) 20   B) 50   C) 2.0  →
-  "Option A: 20
-   Option B: 50
-   Option C: 2.0"
+  // ── 13. Answer choices → clearly labelled lines ──
+  // Normalise "A) text" → "Option A: text"
+  t = t.replace(/\n\s*([A-E])\s*\)\s*/g, '\nOption $1: ');
+  // Also handle choices that appear mid-line (PDF sometimes runs them together)
+  t = t.replace(/\s{2,}([A-E])\s*\)\s*/g, '\nOption $1: ');
 
-ORDERING QUESTIONS (like "place in increasing order"):
-• N  F  As with choices A) N < As < F → Keep the element symbols readable: "N, F, and As" in stem; answer choices as "Option A: N is less than As is less than F"
+  // ── 14. Ordering / inequality questions ──
+  t = t.replace(/\b([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})\b/g,
+    '$1 is less than $2 is less than $3');
+  t = t.replace(/\b([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})\b/g,
+    '$1 is less than $2');
+  t = t.replace(/\b([A-Za-z]{1,2})\s*>\s*([A-Za-z]{1,2})\b/g,
+    '$1 is greater than $2');
 
-MULTI-PART QUESTIONS (parts a, b, c, d):
-Label clearly: "Part a:", "Part b:", etc.
+  // ── 15. n= transitions (quantum/energy levels) ──
+  t = t.replace(/\bn\s*=\s*(\d+)\s*to\s*n\s*=\s*(\d+)/gi,
+    'n equals $1 to n equals $2');
 
-QUESTIONS WITH IMAGES (orbital diagrams, Lewis structures, molecular structures):
-The PDF cannot extract images. Add this note in parentheses:
-"(Note to student: refer to the diagram shown on your printed exam for this question.)"
+  // ── 16. Period / group descriptors ──
+  t = t.replace(/\bperiod\s+(\d)\b/gi, 'period $1');
+  t = t.replace(/\bgroup\s+([IVX\dAB]+)\b/gi, 'group $1');
 
-STRIP ENTIRELY:
-• Page numbers (standalone "1", "2", "3", etc.)
-• "Illegal to photocopy or post on the internet"
-• "©2009 ACS DivCHED Exams Institute"  
-• Answer blank lines like "1) ___"
-• Repeated question numbers at end of line like "1) ... 1)"
-• The abbreviations/constants page and periodic table page
-• "MULTIPLE CHOICE. Choose the one alternative..."
-• "Please show your work for the following problems."
+  // ── 17. Multi-part labels ──
+  t = t.replace(/\n\s*([a-d])\s*\)/g, '\nPart $1:');
 
-=== OUTPUT FORMAT ===
-Return ONLY valid JSON with no markdown fences:
-{
-  "meta": {
-    "title": "exam title e.g. CHM 1010 Exam 4",
-    "course": "course code",
-    "date": "exam date",
-    "instructor": "instructor name if visible"
-  },
-  "questions": [
-    {
-      "number": 1,
-      "type": "multiple_choice",
-      "spoken": "Full speakable question text. Each answer choice on its own line starting with Option A:, Option B:, etc.",
-      "preview": "First 80 chars of question stem only"
-    }
-  ]
-}
+  // ── 18. Bond energy table lines ──
+  // "Xe-F  147" → "Xe single bond F: 147 kilojoules per mole"
+  t = t.replace(/^([A-Z][a-z]?)-([A-Z][a-z]?)\s+(\d+)\s*$/gm,
+    '$1 single bond $2: $3 kilojoules per mole');
 
-Types: "multiple_choice", "free_response", "multi_part"
-Every question must have complete spoken text — do not truncate or summarize.`;
-}
+  // ── 19. Electronegativity table ──
+  // "H  C  N  O" followed by "2.1  2.5  3.0  3.5"
+  // Convert to readable sentence (best effort on the values)
+  t = t.replace(/Electronegativity:\s*([\d.\s]+)/g, function(_, vals){
+    return 'Electronegativities: ' + vals.trim().replace(/\s+/g, ', ');
+  });
 
-// ── Build DOCX ───────────────────────────────────────────────────────────────
-async function buildDocx(questions, meta) {
-  const zip = new JSZip();
+  // ── 20. Formal charge notation ──
+  t = t.replace(/\+\s*(\d)\b/g, 'positive $1');
+  t = t.replace(/-\s*(\d)\b/g,  'negative $1');
 
-  function esc(s) {
-    return String(s || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // strip control chars
-      .replace(/\r\n|\r/g, '\n');
+  // ── 21. Image-only questions (orbital diagrams, Lewis structures) ──
+  // If after all conversion the question body is very short, flag it
+  var bodyLen = t.replace(/Option [A-E]:.*\n?/g,'').trim().length;
+  if (bodyLen < 30 && /orbital diagram|lewis structure|structure below/i.test(raw)) {
+    t += '\n(Note: Refer to the diagram on your printed exam for this question.)';
   }
 
-  // Helper: turn a block of text into w:p elements
-  // Splits on newlines, returns array of <w:p> strings
-  function textToParagraphs(text, styleId, extraRpr = '') {
-    const lines = esc(text).split('\n');
-    return lines.map(line => {
-      const t = line.trim();
-      if (!t) return `<w:p><w:pPr><w:pStyle w:val="${styleId}"/></w:pPr></w:p>`;
-      // Detect answer choice lines
-      const isChoice = /^Option [A-E]:/i.test(t);
-      const sid = isChoice ? 'AnswerChoice' : styleId;
-      return `<w:p>
-        <w:pPr><w:pStyle w:val="${sid}"/></w:pPr>
-        <w:r>${extraRpr}<w:t xml:space="preserve">${t}</w:t></w:r>
-      </w:p>`;
+  // ── 22. Clean up whitespace ──
+  // Collapse 3+ spaces to 1
+  t = t.replace(/[ \t]{3,}/g, ' ');
+  // Trim each line
+  t = t.split('\n').map(function(l){ return l.trimEnd(); }).join('\n');
+  // Max 2 consecutive blank lines
+  t = t.replace(/\n{3,}/g, '\n\n');
+
+  return t.trim();
+}
+
+// Spell out electron config tokens: "4s23d8" → "4s2, 3d8"
+function spellConfig(s) {
+  var tokens = s.match(/\d+[spdf]\d+/gi);
+  if (!tokens) return s;
+  return tokens.join(', ');
+}
+
+function escRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ── Review panel ──────────────────────────────────────────────────────────────
+function buildReview() {
+  var tb = document.getElementById('qtable');
+  tb.innerHTML = '';
+  document.getElementById('rc').textContent = gQuestions.length + ' questions';
+  gQuestions.forEach(function(q, i) {
+    var tagClass = q.type === 'multiple_choice' ? 'mc' : q.type === 'free_response' ? 'fr' : 'mp';
+    var tagLabel = q.type === 'multiple_choice' ? 'MC' : q.type === 'free_response' ? 'FR' : 'MP';
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="qnum">Q' + q.number +
+        '<span class="qtag ' + tagClass + '">' + tagLabel + '</span></td>' +
+      '<td><textarea id="qta' + i + '" rows="4">' +
+        escHtml(q.spoken) +
+      '</textarea></td>';
+    tb.appendChild(tr);
+    var ta = document.getElementById('qta' + i);
+    ta.addEventListener('input', function(){
+      ta.classList.add('ed');
+      q.spoken = ta.value;
     });
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Export DOCX ───────────────────────────────────────────────────────────────
+async function exportDoc() {
+  document.getElementById('prog').classList.add('show');
+  document.getElementById('dlrow').classList.remove('show');
+  setP(10, 'Building document XML…');
+
+  function xmlEsc(s) {
+    return String(s||'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
   }
 
-  // ── [Content_Types].xml ──
-  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
-</Types>`);
+  var bodyParts = [];
 
-  // ── _rels/.rels ──
-  zip.folder('_rels').file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`);
+  // Exam title header
+  var titleText = gMeta.title || 'Chemistry Exam';
+  var metaLine  = [gMeta.course, gMeta.date].filter(Boolean).join('   ·   ');
 
-  // ── word/_rels/document.xml.rels ──
-  zip.folder('word').folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
-</Relationships>`);
-
-  // ── word/settings.xml ──
-  zip.folder('word').file('settings.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:defaultTabStop w:val="720"/>
-  <w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>
-</w:settings>`);
-
-  // ── word/styles.xml ──
-  zip.folder('word').file('styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:docDefaults>
-    <w:rPrDefault><w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>
-      <w:sz w:val="28"/><w:szCs w:val="28"/>
-      <w:lang w:val="en-US"/>
-    </w:rPr></w:rPrDefault>
-    <w:pPrDefault><w:pPr>
-      <w:spacing w:after="160" w:line="288" w:lineRule="auto"/>
-    </w:pPr></w:pPrDefault>
-  </w:docDefaults>
-
-  <w:style w:type="paragraph" w:styleId="Normal" w:default="1">
-    <w:name w:val="Normal"/>
-  </w:style>
-
-  <w:style w:type="paragraph" w:styleId="ExamTitle">
-    <w:name w:val="Exam Title"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr>
-      <w:jc w:val="center"/>
-      <w:spacing w:before="0" w:after="80"/>
-    </w:pPr>
-    <w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-      <w:b/><w:sz w:val="40"/><w:szCs w:val="40"/>
-    </w:rPr>
-  </w:style>
-
-  <w:style w:type="paragraph" w:styleId="ExamMeta">
-    <w:name w:val="Exam Meta"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr>
-      <w:jc w:val="center"/>
-      <w:spacing w:before="0" w:after="60"/>
-    </w:pPr>
-    <w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-      <w:sz w:val="24"/><w:szCs w:val="24"/>
-      <w:color w:val="555555"/>
-    </w:rPr>
-  </w:style>
-
-  <w:style w:type="paragraph" w:styleId="AccessNote">
-    <w:name w:val="Accessibility Note"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr>
-      <w:jc w:val="center"/>
-      <w:spacing w:before="120" w:after="400"/>
-      <w:pBdr>
-        <w:bottom w:val="single" w:sz="6" w:space="4" w:color="1F4E79"/>
-      </w:pBdr>
-    </w:pPr>
-    <w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-      <w:i/><w:sz w:val="20"/><w:szCs w:val="20"/>
-      <w:color w:val="1F4E79"/>
-    </w:rPr>
-  </w:style>
-
-  <w:style w:type="paragraph" w:styleId="QuestionHeading">
-    <w:name w:val="Question Heading"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr>
-      <w:spacing w:before="400" w:after="100"/>
-    </w:pPr>
-    <w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-      <w:b/><w:sz w:val="30"/><w:szCs w:val="30"/>
-      <w:color w:val="1F4E79"/>
-    </w:rPr>
-  </w:style>
-
-  <w:style w:type="paragraph" w:styleId="QuestionBody">
-    <w:name w:val="Question Body"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr>
-      <w:spacing w:before="0" w:after="120"/>
-      <w:ind w:left="360"/>
-    </w:pPr>
-    <w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-      <w:sz w:val="28"/><w:szCs w:val="28"/>
-    </w:rPr>
-  </w:style>
-
-  <w:style w:type="paragraph" w:styleId="AnswerChoice">
-    <w:name w:val="Answer Choice"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr>
-      <w:spacing w:before="40" w:after="40"/>
-      <w:ind w:left="720"/>
-    </w:pPr>
-    <w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-      <w:sz w:val="26"/><w:szCs w:val="26"/>
-      <w:color w:val="222222"/>
-    </w:rPr>
-  </w:style>
-
-  <w:style w:type="paragraph" w:styleId="FreeResponse">
-    <w:name w:val="Free Response"/>
-    <w:basedOn w:val="Normal"/>
-    <w:pPr>
-      <w:spacing w:before="0" w:after="120"/>
-      <w:ind w:left="360"/>
-    </w:pPr>
-    <w:rPr>
-      <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>
-      <w:sz w:val="28"/><w:szCs w:val="28"/>
-    </w:rPr>
-  </w:style>
-</w:styles>`);
-
-  // ── Build body paragraphs ──
-  const bodyParts = [];
-
-  // Exam header
-  const title = meta.title || 'Chemistry Exam';
-  bodyParts.push(`<w:p>
-    <w:pPr><w:pStyle w:val="ExamTitle"/></w:pPr>
-    <w:r><w:t xml:space="preserve">${esc(title)}</w:t></w:r>
-  </w:p>`);
-
-  const metaLine = [meta.course, meta.date, meta.instructor ? `Instructor: ${meta.instructor}` : '']
-    .filter(Boolean).join('   ·   ');
+  bodyParts.push(
+    '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="80"/>' +
+    '<w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>' +
+    '<w:r><w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr>' +
+    '<w:t xml:space="preserve">' + xmlEsc(titleText) + '</w:t></w:r></w:p>'
+  );
   if (metaLine) {
-    bodyParts.push(`<w:p>
-      <w:pPr><w:pStyle w:val="ExamMeta"/></w:pPr>
-      <w:r><w:t xml:space="preserve">${esc(metaLine)}</w:t></w:r>
-    </w:p>`);
+    bodyParts.push(
+      '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="60"/></w:pPr>' +
+      '<w:r><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:color w:val="555555"/></w:rPr>' +
+      '<w:t xml:space="preserve">' + xmlEsc(metaLine) + '</w:t></w:r></w:p>'
+    );
   }
 
-  bodyParts.push(`<w:p>
-    <w:pPr><w:pStyle w:val="AccessNote"/></w:pPr>
-    <w:r><w:t xml:space="preserve">Read-Aloud Version — Office of Accessibility Resources &amp; Services, High Point University — Open in Microsoft Word and use Review &gt; Read Aloud</w:t></w:r>
-  </w:p>`);
+  // Accessibility note
+  bodyParts.push(
+    '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="360"/>' +
+    '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="4" w:color="1F4E79"/></w:pBdr></w:pPr>' +
+    '<w:r><w:rPr><w:i/><w:sz w:val="20"/><w:szCs w:val="20"/><w:color w:val="1F4E79"/></w:rPr>' +
+    '<w:t xml:space="preserve">Read-Aloud Version — Office of Accessibility Resources &amp; Services, High Point University — Open in Microsoft Word and use Review &gt; Read Aloud</w:t></w:r></w:p>'
+  );
 
-  // Questions
-  questions.forEach(q => {
-    const typeLabel = q.type === 'multiple_choice' ? 'Multiple Choice'
-                    : q.type === 'free_response'   ? 'Free Response'
-                    : q.type === 'multi_part'       ? 'Multi-Part'
-                    : '';
+  setP(30, 'Writing questions…');
+  await tick();
 
-    bodyParts.push(`<w:p>
-      <w:pPr><w:pStyle w:val="QuestionHeading"/></w:pPr>
-      <w:r><w:t xml:space="preserve">Question ${q.number}${typeLabel ? ' — ' + typeLabel : ''}</w:t></w:r>
-    </w:p>`);
+  gQuestions.forEach(function(q, qi) {
+    setP(30 + Math.round(qi / gQuestions.length * 55), 'Writing question ' + q.number + '…');
 
-    // Split spoken text on newlines → individual paragraphs
-    const lines = esc(q.spoken || '').split('\n');
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t) continue;
-      const isChoice = /^Option [A-E]:/i.test(t);
-      const sid = isChoice ? 'AnswerChoice' : (q.type === 'free_response' || q.type === 'multi_part' ? 'FreeResponse' : 'QuestionBody');
-      bodyParts.push(`<w:p>
-        <w:pPr><w:pStyle w:val="${sid}"/></w:pPr>
-        <w:r><w:t xml:space="preserve">${t}</w:t></w:r>
-      </w:p>`);
-    }
+    var typeLabel = q.type === 'multiple_choice' ? ' — Multiple Choice'
+                  : q.type === 'free_response'   ? ' — Free Response'
+                  : q.type === 'multi_part'       ? ' — Multi-Part'
+                  : '';
+
+    // Question heading
+    bodyParts.push(
+      '<w:p><w:pPr><w:spacing w:before="360" w:after="100"/></w:pPr>' +
+      '<w:r><w:rPr><w:b/><w:sz w:val="30"/><w:szCs w:val="30"/>' +
+      '<w:color w:val="1F4E79"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+      '<w:t xml:space="preserve">Question ' + q.number + xmlEsc(typeLabel) + '</w:t></w:r></w:p>'
+    );
+
+    // Spoken text — each line becomes its own paragraph
+    var lines = (q.spoken || '').split('\n');
+    lines.forEach(function(line) {
+      var l = line.trim();
+      if (!l) return;
+      var isChoice = /^Option [A-E]:/i.test(l);
+      var indent   = isChoice ? '<w:ind w:left="720"/>' : '<w:ind w:left="360"/>';
+      var sz       = isChoice ? '26' : '28';
+      var spacing  = isChoice
+        ? '<w:spacing w:before="40" w:after="40"/>'
+        : '<w:spacing w:before="0" w:after="120"/>';
+      bodyParts.push(
+        '<w:p><w:pPr>' + spacing + indent + '</w:pPr>' +
+        '<w:r><w:rPr><w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' +
+        '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+        '<w:t xml:space="preserve">' + xmlEsc(l) + '</w:t></w:r></w:p>'
+      );
+    });
   });
 
-  // ── word/document.xml ──
-  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document
-  xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
-  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-  xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
-  mc:Ignorable="w14">
-  <w:body>
-    ${bodyParts.join('\n    ')}
-    <w:sectPr>
-      <w:pgSz w:w="12240" w:h="15840"/>
-      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
-               w:header="720" w:footer="720" w:gutter="0"/>
-    </w:sectPr>
-  </w:body>
-</w:document>`;
+  setP(88, 'Packaging…');
+  await tick();
+
+  var docXml =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"' +
+    ' xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"' +
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
+    ' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"' +
+    ' xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"' +
+    ' mc:Ignorable="w14">' +
+    '<w:body>' +
+    bodyParts.join('') +
+    '<w:sectPr>' +
+    '<w:pgSz w:w="12240" w:h="15840"/>' +
+    '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"' +
+    ' w:header="720" w:footer="720" w:gutter="0"/>' +
+    '</w:sectPr>' +
+    '</w:body></w:document>';
+
+  var zip = new JSZip();
+
+  zip.file('[Content_Types].xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>' +
+    '</Types>'
+  );
+
+  zip.folder('_rels').file('.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    '</Relationships>'
+  );
+
+  zip.folder('word').folder('_rels').file('document.xml.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>' +
+    '</Relationships>'
+  );
+
+  zip.folder('word').file('settings.xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:defaultTabStop w:val="720"/>' +
+    '<w:compat><w:compatSetting w:name="compatibilityMode"' +
+    ' w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>' +
+    '</w:settings>'
+  );
 
   zip.folder('word').file('document.xml', docXml);
-  return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+
+  var blob = await zip.generateAsync({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}});
+
+  setP(100, 'Done!');
+  setTimeout(function(){ document.getElementById('prog').classList.remove('show'); }, 1200);
+
+  var name = gFile.name.replace(/\.(pdf|docx)$/i, '') + '_ReadAloud.docx';
+  var url  = URL.createObjectURL(blob);
+  document.getElementById('dlbtn').href     = url;
+  document.getElementById('dlbtn').download = name;
+  document.getElementById('dli').textContent = gQuestions.length + ' questions exported → ' + name;
+  document.getElementById('dlrow').classList.add('show');
+  document.getElementById('dlrow').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
-// ── Download ─────────────────────────────────────────────────────────────────
-function downloadDocx() {
-  if (!docxBlob) return;
-  const url = URL.createObjectURL(docxBlob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = docxFilename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function setP(pct, msg) {
+  document.getElementById('pb').style.width = pct + '%';
+  document.getElementById('pl').textContent = msg;
 }
 
-// ── UI helpers ───────────────────────────────────────────────────────────────
-function setStep(num, state, detail) {
-  const step = document.getElementById(`step${num}`);
-  const dot  = document.getElementById(`dot${num}`);
-  const det  = document.getElementById(`detail${num}`);
-  step.className = 'step ' + state;
-  dot.textContent = state === 'done' ? '✓' : state === 'error' ? '✕' : String(num);
-  det.textContent = detail;
+function showErr(msg) {
+  var e = document.getElementById('err');
+  e.textContent = '⚠ ' + msg;
+  e.classList.add('show');
 }
 
-function resetSteps() {
-  for (let i = 1; i <= 3; i++) {
-    document.getElementById(`step${i}`).className = 'step';
-    document.getElementById(`dot${i}`).textContent = String(i);
-  }
+function hideErr() {
+  document.getElementById('err').classList.remove('show');
 }
 
-function showPreview(parsed) {
-  const qs = parsed.questions || [];
-  const meta = parsed.meta || {};
-
-  document.getElementById('previewTitle').textContent =
-    meta.title || 'Exam Ready';
-  document.getElementById('previewMeta').textContent =
-    `${qs.length} question${qs.length !== 1 ? 's' : ''} converted  ·  ${docxFilename}`;
-
-  const list = document.getElementById('qPreviewList');
-  list.innerHTML = '';
-  qs.forEach(q => {
-    const item = document.createElement('div');
-    item.className = 'q-preview-item';
-    item.innerHTML = `
-      <div class="q-preview-num">Question ${q.number} — ${(q.type||'').replace(/_/g,' ')}</div>
-      <div class="q-preview-text">${escapeHtml(q.spoken || '')}</div>
-    `;
-    list.appendChild(item);
-  });
-
-  document.getElementById('previewCard').classList.add('show');
-  document.getElementById('resetLink').classList.add('show');
-  document.getElementById('previewCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+function tick() {
+  return new Promise(function(r){ setTimeout(r, 10); });
 }
 
-function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function showError(msg) {
-  const el = document.getElementById('errorCard');
-  el.textContent = '⚠ ' + msg;
-  el.classList.add('show');
-  document.getElementById('resetLink').classList.add('show');
-  document.getElementById('progressCard').classList.remove('show');
-}
-
-function hideError() {
-  document.getElementById('errorCard').classList.remove('show');
-  document.getElementById('resetLink').classList.remove('show');
-}
-
-function fullReset() {
-  clearFile();
-  hideError();
-  document.getElementById('progressCard').classList.remove('show');
-  document.getElementById('previewCard').classList.remove('show');
-  document.getElementById('resetLink').classList.remove('show');
-  document.getElementById('convertBtn').disabled = true;
-  docxBlob = null;
-  docxFilename = '';
-  resetSteps();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+function resetAll() {
+  gFile = null; gQuestions = []; gMeta = {};
+  fi.value = '';
+  document.getElementById('fpill').classList.remove('show');
+  document.getElementById('btnGo').disabled = true;
+  document.getElementById('review').classList.remove('show');
+  document.getElementById('dlrow').classList.remove('show');
+  document.getElementById('prog').classList.remove('show');
+  hideErr();
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 </script>
 </body>
