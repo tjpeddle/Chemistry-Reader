@@ -7,7 +7,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#F7F5F0;--card:#fff;--bd:#E2DDD6;--tx:#18160F;--mu:#8C8880;--gr:#1B4332;--gl:#EAF2ED;--gm:#2D6A4F;--am:#92400E;--ab:#FEF3C7;--rd:#991B1B;--rb:#FEF2F2;--bl:#1E3A5F;--blb:#EFF6FF}
+:root{--bg:#F7F5F0;--card:#fff;--bd:#E2DDD6;--tx:#18160F;--mu:#8C8880;--gr:#1B4332;--gl:#EAF2ED;--gm:#2D6A4F;--am:#92400E;--ab:#FEF3C7;--rd:#991B1B;--rb:#FEF2F2}
 html,body{min-height:100vh;background:var(--bg);font-family:'Lato',sans-serif;color:var(--tx)}
 .wrap{max-width:740px;margin:0 auto;padding:3rem 1.5rem 6rem}
 header{margin-bottom:2rem}
@@ -46,8 +46,8 @@ h1 span{color:var(--gm)}
 .qtable{width:100%;border-collapse:collapse;display:block;max-height:520px;overflow-y:auto}
 .qtable tr{border-bottom:1px solid var(--bg)}
 .qtable td{padding:5px 4px;vertical-align:top}
-.qtable .qnum{font-family:'DM Mono',monospace;font-size:10px;color:var(--mu);white-space:nowrap;width:32px;padding-top:9px}
-.qtable textarea{width:100%;font-size:13px;font-family:'Lato',sans-serif;padding:5px 8px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--tx);resize:vertical;min-height:52px;display:block;box-sizing:border-box;line-height:1.5}
+.qtable .qnum{font-family:'DM Mono',monospace;font-size:10px;color:var(--mu);white-space:nowrap;width:36px;padding-top:9px}
+.qtable textarea{width:100%;font-size:13px;font-family:'Lato',sans-serif;padding:5px 8px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--tx);resize:vertical;min-height:60px;display:block;box-sizing:border-box;line-height:1.5}
 .qtable textarea:focus{outline:none;border-color:var(--gm)}
 .qtable textarea.ed{border-color:#3B82F6;background:#EFF6FF}
 .ract{display:flex;gap:.7rem;margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--bd)}
@@ -66,13 +66,11 @@ h1 span{color:var(--gm)}
 </head>
 <body>
 <div class="wrap">
-
 <header>
   <div class="eye">OARS · High Point University · Accessibility</div>
   <h1>Chem <span>Read Aloud</span></h1>
-  <p class="sub">Upload a PDF or Word exam from Accommodate. The tool converts chemistry notation, formulas, and symbols into clean spoken language, then exports a .docx ready for Word's Read Aloud feature.</p>
+  <p class="sub">Upload a PDF or Word exam from Accommodate. The tool converts chemistry notation and symbols into clean spoken language, then exports a .docx ready for Word's Read Aloud feature.</p>
 </header>
-
 <div class="card">
   <div class="clbl">Exam File</div>
   <div class="drop" id="drop">
@@ -84,21 +82,18 @@ h1 span{color:var(--gm)}
   <div class="fpill" id="fpill"><span id="ficon">📝</span><span class="fn" id="fn"></span><button onclick="clearFile()">✕</button></div>
   <div class="err" id="err"></div>
 </div>
-
 <button class="btn-go" id="btnGo" onclick="run()" disabled>⚡ Extract &amp; Review</button>
-
 <div class="prog" id="prog">
   <div class="pb-bg"><div class="pb" id="pb"></div></div>
   <div class="pl" id="pl">Loading…</div>
 </div>
-
 <div class="review" id="review">
   <div class="card">
     <div class="rh">
       <span class="rt">Review Converted Questions</span>
       <span class="rc" id="rc"></span>
     </div>
-    <div class="rnote">Each question has been converted for Word Read Aloud. Edit any line before exporting — changes are saved automatically.</div>
+    <div class="rnote">Each question has been converted for Word Read Aloud. Edit any line before exporting.</div>
     <table class="qtable" id="qtable"></table>
     <div class="ract">
       <button class="btn-rst" onclick="resetAll()">↺ Reset</button>
@@ -110,7 +105,6 @@ h1 span{color:var(--gm)}
     <span class="dli" id="dli"></span>
   </div>
 </div>
-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
@@ -118,571 +112,530 @@ h1 span{color:var(--gm)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
 <script>
 'use strict';
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── State ─────────────────────────────────────────────────────────────────────
-var gFile = null;
-var gQuestions = []; // [{number, type, spoken}]
-var gMeta = {};      // {title, course, date}
+var gFile=null,gQuestions=[],gMeta={};
 
 // ── File handling ─────────────────────────────────────────────────────────────
-var drop = document.getElementById('drop');
-var fi   = document.getElementById('fi');
-drop.addEventListener('dragover',  function(e){e.preventDefault();drop.classList.add('over')});
-drop.addEventListener('dragleave', function(){drop.classList.remove('over')});
-drop.addEventListener('drop', function(e){
-  e.preventDefault(); drop.classList.remove('over');
-  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
-});
-fi.addEventListener('change', function(){ if(fi.files[0]) setFile(fi.files[0]); });
-
-function setFile(f) {
-  if (!/\.(pdf|docx)$/i.test(f.name)) { showErr('Please upload a PDF or .docx file.'); return; }
-  gFile = f;
-  document.getElementById('fn').textContent = f.name;
-  document.getElementById('ficon').textContent = /\.pdf$/i.test(f.name) ? '📕' : '📘';
+var drop=document.getElementById('drop'),fi=document.getElementById('fi');
+drop.addEventListener('dragover',function(e){e.preventDefault();drop.classList.add('over')});
+drop.addEventListener('dragleave',function(){drop.classList.remove('over')});
+drop.addEventListener('drop',function(e){e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0])});
+fi.addEventListener('change',function(){if(fi.files[0])setFile(fi.files[0])});
+function setFile(f){
+  if(!/\.(pdf|docx)$/i.test(f.name)){showErr('Please upload a PDF or .docx file.');return;}
+  gFile=f;
+  document.getElementById('fn').textContent=f.name;
+  document.getElementById('ficon').textContent=/\.pdf$/i.test(f.name)?'📕':'📘';
   document.getElementById('fpill').classList.add('show');
-  document.getElementById('btnGo').disabled = false;
+  document.getElementById('btnGo').disabled=false;
   hideErr();
 }
+function clearFile(){gFile=null;fi.value='';document.getElementById('fpill').classList.remove('show');document.getElementById('btnGo').disabled=true;}
 
-function clearFile() {
-  gFile = null; fi.value = '';
-  document.getElementById('fpill').classList.remove('show');
-  document.getElementById('btnGo').disabled = true;
-}
-
-// ── Main run ──────────────────────────────────────────────────────────────────
-async function run() {
-  if (!gFile) return;
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function run(){
+  if(!gFile)return;
   hideErr();
   document.getElementById('review').classList.remove('show');
   document.getElementById('dlrow').classList.remove('show');
   document.getElementById('prog').classList.add('show');
-  document.getElementById('btnGo').disabled = true;
-
-  try {
-    setP(5, 'Reading file…');
-    var rawText = /\.pdf$/i.test(gFile.name)
-      ? await extractPDF(gFile)
-      : await extractDOCX(gFile);
-
-    setP(35, 'Parsing questions…');
-    var parsed = parseExam(rawText);
-    gMeta      = parsed.meta;
-    gQuestions = parsed.questions;
-
-    if (!gQuestions.length) throw new Error('No questions found. The file may be image-only or scanned — text must be selectable.');
-
-    setP(70, 'Converting chemistry notation…');
-    gQuestions.forEach(function(q){ q.spoken = convertToSpoken(q.raw); });
-
-    setP(95, 'Building review…');
+  document.getElementById('btnGo').disabled=true;
+  try{
+    setP(5,'Reading file…');
+    var lines=/\.pdf$/i.test(gFile.name)?await extractPDFLines(gFile):await extractDOCXLines(gFile);
+    setP(35,'Parsing questions…');
+    var parsed=parseExam(lines);
+    gMeta=parsed.meta;gQuestions=parsed.questions;
+    if(!gQuestions.length)throw new Error('No questions found. The file may be image-only or scanned — text must be selectable.');
+    setP(80,'Building review…');
     await tick();
     buildReview();
-    setP(100, 'Done — review and edit below.');
-    setTimeout(function(){ document.getElementById('prog').classList.remove('show'); }, 1200);
+    setP(100,'Done — review and edit below.');
+    setTimeout(function(){document.getElementById('prog').classList.remove('show');},1200);
     document.getElementById('review').classList.add('show');
-    document.getElementById('review').scrollIntoView({behavior:'smooth', block:'start'});
-
-  } catch(e) {
+    document.getElementById('review').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
     document.getElementById('prog').classList.remove('show');
-    document.getElementById('btnGo').disabled = false;
-    showErr(e.message || String(e));
+    document.getElementById('btnGo').disabled=false;
+    showErr(e.message||String(e));
   }
 }
 
-// ── PDF extraction ────────────────────────────────────────────────────────────
-async function extractPDF(file) {
-  var ab  = await file.arrayBuffer();
-  var pdf = await pdfjsLib.getDocument({data: ab}).promise;
-  var out = '';
-  for (var i = 1; i <= pdf.numPages; i++) {
-    var page    = await pdf.getPage(i);
-    var content = await page.getTextContent();
-    var items   = content.items;
-    var lastY   = null;
-    var line    = '';
-    for (var j = 0; j < items.length; j++) {
-      var item = items[j];
-      var y    = Math.round(item.transform[5]);
-      if (lastY !== null && Math.abs(y - lastY) > 2) {
-        out += line + '\n';
-        line = '';
-      }
-      line  += item.str;
-      lastY  = y;
+// ── PDF extraction: group tokens by Y position into visual lines ──────────────
+async function extractPDFLines(file){
+  var ab=await file.arrayBuffer();
+  var pdf=await pdfjsLib.getDocument({data:ab}).promise;
+  var allLines=[];
+  for(var i=1;i<=pdf.numPages;i++){
+    var page=await pdf.getPage(i);
+    var content=await page.getTextContent();
+    var items=content.items;
+    // Group by rounded Y — same Y = same visual line
+    var byY={};
+    for(var j=0;j<items.length;j++){
+      var y=Math.round(items[j].transform[5]);
+      if(!byY[y])byY[y]=[];
+      byY[y].push(items[j].str);
     }
-    if (line.trim()) out += line + '\n';
-    out += '\n';
+    // Sort Y descending (top of page = highest Y in PDF coords)
+    var ys=Object.keys(byY).map(Number).sort(function(a,b){return b-a;});
+    for(var k=0;k<ys.length;k++){
+      var lineStr=byY[ys[k]].join('').trim();
+      if(lineStr)allLines.push(lineStr);
+    }
   }
-  return out;
+  return allLines;
 }
 
 // ── DOCX extraction ───────────────────────────────────────────────────────────
-async function extractDOCX(file) {
-  var ab     = await file.arrayBuffer();
-  var result = await mammoth.extractRawText({arrayBuffer: ab});
-  return result.value;
+async function extractDOCXLines(file){
+  var ab=await file.arrayBuffer();
+  var result=await mammoth.extractRawText({arrayBuffer:ab});
+  return result.value.split('\n').map(function(l){return l.trim();}).filter(Boolean);
 }
 
-// ── Exam parser ───────────────────────────────────────────────────────────────
-// Handles the fragmented lines PDF.js produces (superscripts on own lines, etc.)
-function parseExam(raw) {
-  // Step 1: Join fragmented superscript/subscript tokens
-  // PDF extracts things like "Na\n+\n" — rejoin them
-  var text = raw;
+// ── Parser ────────────────────────────────────────────────────────────────────
+// The core insight: PDF.js groups tokens by visual Y position.
+// Each "line" from extractPDFLines is ONE visual row on the page.
+// A question stem like "Ham radio operators..." is one line.
+// But superscripts (exponents, charges) appear as separate short lines: "6", "+", "-18" etc.
+// Answer choices also appear as separate lines: "A)", "20", "B)", "50" etc.
+//
+// Strategy:
+// 1. Walk lines, identify question boundaries by /^\d{1,2}\)/ pattern
+// 2. Within a question, collect stem lines until we hit answer choices
+// 3. Answer choices detected by /^[A-E]\)/ lines
+// 4. A "superscript" line is a standalone short token (number or sign) immediately
+//    after a line ending in a letter/number — attach it to the previous line
 
-  // Remove junk lines
-  text = text.replace(/illegal to photocopy[^\n]*/gi, '');
-  text = text.replace(/©\d{4}[^\n]*/g, '');
-  text = text.replace(/Page \d+\s*\n/gi, '');
-  text = text.replace(/MULTIPLE CHOICE[^\n]*/gi, '');
-  text = text.replace(/Choose the one alternative[^\n]*/gi, '');
-  text = text.replace(/Please show your work[^\n]*/gi, '');
+function parseExam(lines){
+  var meta={title:'',course:'',date:''};
 
-  // Collapse runs of blank lines to single blank
-  text = text.replace(/\n{3,}/g, '\n\n');
+  // Extract meta from top lines
+  for(var i=0;i<Math.min(lines.length,6);i++){
+    var l=lines[i];
+    if(/CHM|CHEM/i.test(l)&&!meta.title) meta.title=l.replace(/Name_{3,}.*/,'').trim();
+    if(/(Monday|Tuesday|Wednesday|Thursday|Friday)/i.test(l)) meta.date=l.trim();
+    if(/Spring|Fall|Summer/i.test(l)&&!meta.course) meta.course=l.trim();
+  }
 
-  // Detect exam meta from first ~300 chars
-  var meta = {title:'', course:'', date:''};
-  var metaBlock = text.slice(0, 400);
-  var courseM = metaBlock.match(/([A-Z]{2,4}\s*\d{3,4}[^\n]*exam[^\n]*)/i);
-  if (courseM) meta.title = courseM[1].trim();
-  var dateM = metaBlock.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)[^\n]*/i);
-  if (dateM) meta.date = dateM[0].trim();
+  // Noise patterns to skip entirely
+  function isNoise(l){
+    return /^(Page \d+|illegal to photocopy|©\d{4}|\d{1,2}$|MULTIPLE CHOICE|Choose the one|Please show your work)/i.test(l.trim());
+  }
 
-  // Split into question blocks
-  // A question starts with a number followed by ) at line start
-  var lines    = text.split('\n');
-  var questions = [];
-  var current  = null;
-  var qNumRe   = /^\s*(\d{1,2})\s*\)/;
-  // Also detect free-response starters like "29)" at beginning of line
-  var frRe     = /^\s*(\d{1,2})\s*\)\s*\S/;
+  var questions=[];
+  var current=null;   // {number, stemLines[], choiceMap:{A:[], B:[], ...}}
+  var curChoice=null; // 'A','B','C','D','E' or null
 
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    var m    = line.match(qNumRe);
-
-    // Skip lines that are just a standalone number (page numbers, duplicate Q numbers)
-    if (/^\s*\d{1,2}\s*$/.test(line)) continue;
-
-    if (m) {
-      var qn = parseInt(m[1], 10);
-      // Avoid false positives: don't start new Q if number < current or > current+1 by a lot
-      if (current && (qn < current.number || qn > current.number + 2)) {
-        // Treat as continuation
-        current.raw += '\n' + line;
-        continue;
-      }
-      if (current) questions.push(current);
-      current = {
-        number: qn,
-        type:   'multiple_choice',
-        raw:    line.replace(qNumRe, '').trim(),
-        choices: []
-      };
-    } else if (current) {
-      current.raw += '\n' + line;
+  function flushCurrent(){
+    if(current){
+      questions.push(finalize(current));
+      current=null;curChoice=null;
     }
   }
-  if (current) questions.push(current);
 
-  // Detect type and clean each question
-  questions.forEach(function(q) {
-    var r = q.raw;
-    // Detect free response (has "pts", "draw", "use the bond", "estimate")
-    if (/\d\s*pts?|\bdraw\b|\buse the bond|\bestimate\b|\bshow your work/i.test(r)) {
-      q.type = r.match(/\b[a-d]\s*\)/i) ? 'multi_part' : 'free_response';
+  for(var idx=0;idx<lines.length;idx++){
+    var line=lines[idx].trim();
+    if(!line||isNoise(line))continue;
+
+    // ── New question? ──
+    // Must be /^\d{1,2}\)/ and not be a duplicate of current question number
+    var qm=line.match(/^(\d{1,2})\)(.*)/);
+    if(qm){
+      var qn=parseInt(qm[1],10);
+      var rest=qm[2].trim();
+      // Skip duplicate question number lines (PDF prints them twice)
+      if(current&&qn===current.number) continue;
+      // Skip if out of sequence going backwards
+      if(current&&qn<current.number) continue;
+      flushCurrent();
+      current={number:qn,stemLines:[],choiceMap:{A:[],B:[],C:[],D:[],E:[]}};
+      curChoice=null;
+      if(rest) current.stemLines.push(rest);
+      continue;
     }
-    // Detect if has A) B) C) choices
-    if (/[A-E]\s*\)\s*\S/.test(r)) q.type = 'multiple_choice';
-  });
 
-  return {meta: meta, questions: questions};
+    if(!current)continue;
+
+    // ── Answer choice label? ──
+    var cm=line.match(/^([A-E])\)(.*)/);
+    if(cm){
+      curChoice=cm[1];
+      var cr=cm[2].trim();
+      if(cr) current.choiceMap[curChoice].push(cr);
+      continue;
+    }
+
+    // ── Multi-part label? a) b) c) d) ──
+    var pm=line.match(/^([a-d])\)\s*(.*)/);
+    if(pm&&!curChoice){
+      current.stemLines.push('PART_'+pm[1].toUpperCase()+': '+pm[2].trim());
+      continue;
+    }
+
+    // ── Otherwise: content line ──
+    if(curChoice!==null){
+      current.choiceMap[curChoice].push(line);
+    } else {
+      current.stemLines.push(line);
+    }
+  }
+  flushCurrent();
+
+  return{meta:meta,questions:questions};
 }
 
-// ── Chemistry → Spoken converter ──────────────────────────────────────────────
-function convertToSpoken(raw) {
-  if (!raw) return '';
-  var t = raw;
+// Turn a raw question object into a spoken string
+function finalize(q){
+  // Join stem: most lines are complete sentences.
+  // Short lines (1-3 chars) are superscripts — attach to previous without space.
+  var stemText=joinWithSuperscripts(q.stemLines);
 
-  // ── 1. Normalise whitespace artifacts from PDF extraction ──
-  // Rejoin broken superscripts: "Na\n+" → "Na+" etc.
-  // Lines that are just a charge/number sitting alone get merged up
-  t = t.replace(/\n([+\-]\d*|\d+[+\-])\n/g, ' $1 ');
-  t = t.replace(/\n([+\-])\s*\n/g, '$1\n');
-
-  // ── 2. Strip answer-blank markers like "1) ___" at end of line ──
-  t = t.replace(/\d{1,2}\)\s*$\n?/gm, '');
-
-  // ── 3. Electron configurations ──
-  // [Ar]4s23d8 style
-  t = t.replace(/\[([A-Z][a-z]?)\](\S+)/g, function(_, noble, rest){
-    return 'bracket ' + noble + ' bracket, ' + spellConfig(rest);
-  });
-  // bare config like 1s22s22p6
-  t = t.replace(/\b((?:\d[spdf]\d+,?\s*){2,})/g, function(_, c){ return spellConfig(c); });
-
-  // ── 4. Quantum numbers ──
-  t = t.replace(/\bml\s*=\s*([+\-]?\d+)/g, 'm-sub-l equals $1');
-  t = t.replace(/\bml\s*=\s*0/g, 'm-sub-l equals 0');
-  t = t.replace(/\bl\s*=\s*(\d)/g, 'l equals $1');
-  t = t.replace(/\bn\s*=\s*(\d)/g, 'n equals $1');
-
-  // ── 5. Hybridisation ──
-  t = t.replace(/\bsp3d2\b/g, 's p 3 d 2');
-  t = t.replace(/\bsp3d\b/g,  's p 3 d');
-  t = t.replace(/\bsp3\b/g,   's p 3');
-  t = t.replace(/\bsp2\b/g,   's p 2');
-  t = t.replace(/\bsp\b/g,    's p');
-
-  // ── 6. Bonds ──
-  t = t.replace(/C\s*[=≡X]\s*N/g,  'C triple bond N');
-  t = t.replace(/C\s*=\s*O/g,       'C double bond O');
-  t = t.replace(/([A-Z][a-z]?)\s*-\s*([A-Z][a-z]?)/g, function(_, a, b){
-    return a + ' single bond ' + b;
+  // Build choice array
+  var choices=[];
+  ['A','B','C','D','E'].forEach(function(letter){
+    var tokens=q.choiceMap[letter];
+    if(tokens&&tokens.length){
+      choices.push({letter:letter,text:joinWithSuperscripts(tokens)});
+    }
   });
 
-  // ── 7. Chemical formulas — common named compounds first ──
-  var namedCompounds = {
-    'XeF6':'Xe F 6', 'XeF2':'Xe F 2',
-    'POCl3':'P O Cl 3', 'ClO3':'Cl O 3',
-    'OCl2':'O Cl 2',
-    'NCl3':'N Cl 3',  'CCl4':'C Cl 4',  'BCl3':'B Cl 3',  'BeCl2':'Be Cl 2',
-    'NO':'N O',  'CO2':'C O 2',  'H2O':'H 2 O',
-    'PO4':'P O 4',  'SO4':'S O 4',  'NO3':'N O 3',  'OH':'O H',
-    'NH3':'N H 3', 'CH4':'C H 4', 'HCl':'H Cl', 'H2SO4':'H 2 S O 4',
-    'NaCl':'Na Cl', 'KCl':'K Cl', 'MgO':'Mg O', 'CaO':'Ca O',
-    'F2':'F 2', 'Cl2':'Cl 2', 'Br2':'Br 2', 'I2':'I 2', 'O2':'O 2', 'N2':'N 2', 'H2':'H 2'
-  };
-  Object.keys(namedCompounds).forEach(function(k){
-    t = t.replace(new RegExp('\\b' + escRe(k) + '\\b','g'), namedCompounds[k]);
+  // Determine type
+  var type='multiple_choice';
+  if(choices.length===0) type='free_response';
+  if(/\bpts?\b|\bdraw\b|\bestimate\b|\buse the bond/i.test(stemText)){
+    type=stemText.indexOf('PART_')>=0?'multi_part':'free_response';
+  }
+  if(stemText.indexOf('PART_')>=0) type='multi_part';
+
+  // Convert stem and choices
+  var spokenStem=convertToSpoken(stemText);
+  var spokenChoices=choices.map(function(c){
+    return 'Option '+c.letter+': '+convertToSpoken(c.text);
   });
 
-  // ── 8. Ionic charges (after formula substitution) ──
-  // Patterns like Na+, Al3+, Mg2+, Cl-, S2-, N3-, O2-
-  t = t.replace(/([A-Z][a-z]?)(\d+)\s*\+/g, '$1 $2 plus');
-  t = t.replace(/([A-Z][a-z]?)\s*\+/g,      '$1 plus');
-  t = t.replace(/([A-Z][a-z]?)(\d+)\s*-/g,  '$1 $2 minus');
-  t = t.replace(/([A-Z][a-z]?)\s*-/g,        '$1 minus');
+  var spoken=spokenStem;
+  if(spokenChoices.length) spoken+='\n'+spokenChoices.join('\n');
 
-  // ── 9. Scientific notation ──
-  t = t.replace(/(\d[\d.]*)\s*[×x\*]\s*10\s*-\s*(\d+)/g, '$1 times 10 to the negative $2');
-  t = t.replace(/(\d[\d.]*)\s*[×x\*]\s*10\s*\+?\s*(\d+)/g, '$1 times 10 to the $2');
-  t = t.replace(/1\s*x\s*10\s*(\d+)/g, '1 times 10 to the $1');
+  return{number:q.number,type:type,spoken:spoken.trim()};
+}
 
-  // ── 10. Math symbols ──
-  t = t.replace(/×/g, ' times ');
-  t = t.replace(/→|⟶|\x0f/g, ' yields ');
-  t = t.replace(/ΔH/g, 'delta H');
-  t = t.replace(/Δ/g,  'delta ');
-  t = t.replace(/°/g,  ' degrees ');
-  t = t.replace(/≥/g,  ' greater than or equal to ');
-  t = t.replace(/≤/g,  ' less than or equal to ');
-  t = t.replace(/\bσ\b/g, 'sigma');
-  t = t.replace(/\bπ\b/g, 'pi');
-  t = t.replace(/\bλ\b/g, 'lambda');
-  t = t.replace(/\bν\b/g, 'nu');
-  t = t.replace(/\bΗ\b/g, 'sigma');  // exam used Η for sigma bonds
-  t = t.replace(/°rxn/g,  'degrees rxn');
+// Join array of string tokens, attaching short superscript tokens to previous
+function joinWithSuperscripts(tokens){
+  var result='';
+  for(var i=0;i<tokens.length;i++){
+    var tok=tokens[i].trim();
+    if(!tok)continue;
+    var isSuperscript=(
+      tok.length<=3&&
+      /^[+\-]?\d*[+\-]?$/.test(tok)&&
+      result.length>0&&
+      /[A-Za-z0-9]$/.test(result)
+    );
+    var isSign=(tok==='+' || tok==='-')&&result.length>0&&/[A-Za-z0-9]$/.test(result);
+    var isPureNumber=/^\d+$/.test(tok)&&tok.length<=2&&result.length>0&&/[A-Za-z]$/.test(result);
+    if(isSuperscript||isSign||isPureNumber){
+      result+=tok; // attach without space
+    } else {
+      if(result&&!result.endsWith(' ')&&tok!=='.'&&tok!==','&&tok!==')'){
+        result+=' ';
+      }
+      result+=tok;
+    }
+  }
+  return result.trim();
+}
 
-  // ── 11. Ionisation energy shorthand ──
-  // IE1 = 1000  IE2 = 2250  etc.
-  t = t.replace(/IE\s*(\d)\s*=\s*([\d,]+)/g, 'IE $1 equals $2 kilojoules per mole');
+// ── Chemistry → Spoken converter ─────────────────────────────────────────────
+function convertToSpoken(t){
+  if(!t)return'';
 
-  // ── 12. Units ──
-  t = t.replace(/\bkJ\/mol\b/g,  'kilojoules per mole');
-  t = t.replace(/\bJ\/mol\b/g,   'joules per mole');
-  t = t.replace(/\bkJ\b/g,       'kilojoules');
-  t = t.replace(/\bMHz\b/g,      'megahertz');
-  t = t.replace(/\bnm\b/g,       'nanometers');
-  t = t.replace(/\bm\b(?=\s+wavelength|\s*\(|\s*\.)/, 'meters');
-  t = t.replace(/\bs-1\b|\bs\^-1\b|\bs−1\b/g, 'per second');
-  t = t.replace(/\bHz\b/g,       'hertz');
-  t = t.replace(/\batm\b/g,      'atmospheres');
-  t = t.replace(/\bmmHg\b/g,     'millimeters of mercury');
+  // Strip leftover noise
+  t=t.replace(/Name_{3,}.*/g,'');
+  t=t.replace(/_{2,}/g,'blank');
 
-  // ── 13. Answer choices → clearly labelled lines ──
-  // Normalise "A) text" → "Option A: text"
-  t = t.replace(/\n\s*([A-E])\s*\)\s*/g, '\nOption $1: ');
-  // Also handle choices that appear mid-line (PDF sometimes runs them together)
-  t = t.replace(/\s{2,}([A-E])\s*\)\s*/g, '\nOption $1: ');
+  // ── Named compound substitutions (longest first to avoid partial matches) ──
+  var cpds=[
+    ['POCl3','P O Cl 3'],['XeF6','Xe F 6'],['XeF2','Xe F 2'],
+    ['ClO3','Cl O 3'],['OCl2','O Cl 2'],['NCl3','N Cl 3'],
+    ['CCl4','C Cl 4'],['BCl3','B Cl 3'],['BeCl2','Be Cl 2'],
+    ['PCl5','P Cl 5'],['PCl3','P Cl 3'],
+    ['H2SO4','H 2 S O 4'],['H2O','H 2 O'],['CO2','C O 2'],
+    ['NH3','N H 3'],['CH4','C H 4'],['HCl','H Cl'],['HBr','H Br'],
+    ['NaCl','Na Cl'],['KCl','K Cl'],['MgO','Mg O'],['CaO','Ca O'],
+    ['PO4','P O 4'],['SO4','S O 4'],['NO3','N O 3'],['CO3','C O 3'],
+    ['OH','O H'],['NO','N O'],
+    ['F2','F 2'],['Cl2','Cl 2'],['Br2','Br 2'],['I2','I 2'],
+    ['O2','O 2'],['N2','N 2'],['H2','H 2']
+  ];
+  cpds.forEach(function(p){t=t.replace(new RegExp('\\b'+escRe(p[0])+'\\b','g'),p[1]);});
 
-  // ── 14. Ordering / inequality questions ──
-  t = t.replace(/\b([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})\b/g,
+  // ── Electron configs ──
+  t=t.replace(/\[([A-Z][a-z]?)\]\s*([^\s,]+)/g,function(_,noble,rest){
+    return 'bracket '+noble+' bracket, '+spellConfig(rest);
+  });
+  t=t.replace(/\[([A-Z][a-z]?)\]/g,'bracket $1 bracket');
+  t=t.replace(/\b((?:\d[spdf]\d+[\s,]*){2,})/g,function(_,c){return spellConfig(c);});
+
+  // ── Hybridisation (must come before lone "sp" check) ──
+  t=t.replace(/\bsp3d2\b/g,'s p 3 d 2');
+  t=t.replace(/\bsp3d\b/g,'s p 3 d');
+  t=t.replace(/\bsp3\b/g,'s p 3');
+  t=t.replace(/\bsp2\b/g,'s p 2');
+  t=t.replace(/\bsp\b/g,'s p');
+
+  // ── Quantum numbers ──
+  t=t.replace(/\bml\s*=\s*([+\-]?\d+)/g,'m-sub-l equals $1');
+  t=t.replace(/\bl\s*=\s*(\d)/g,'l equals $1');
+  t=t.replace(/\bn\s*=\s*(\d+)/g,'n equals $1');
+  // Fix "n equals 6 to n=5" leftover fragments
+  t=t.replace(/to\s*n\s*=\s*(\d+)/g,'to n equals $1');
+
+  // ── Bond notation ──
+  t=t.replace(/C\s*[≡X]\s*N/g,'C triple bond N');
+  t=t.replace(/C\s*={2}\s*N/g,'C double bond N');
+  t=t.replace(/C\s*=\s*O/g,'C double bond O');
+  // single bond between two element symbols
+  t=t.replace(/\b([A-Z][a-z]?)\s*-\s*([A-Z][a-z]?)\b/g,'$1 single bond $2');
+
+  // ── Ionic charges — element+charge patterns ──
+  t=t.replace(/([A-Z][a-z]?)(\d+)\+/g,'$1 $2 plus');
+  t=t.replace(/([A-Z][a-z]?)\+/g,'$1 plus');
+  t=t.replace(/([A-Z][a-z]?)(\d+)-/g,'$1 $2 minus');
+  t=t.replace(/([A-Z][a-z]?)-(?=[,\s\).]|$)/g,'$1 minus');
+
+  // ── Scientific notation (handles fragmented tokens rejoined like "3.7 ×10-18") ──
+  t=t.replace(/(\d[\d.]*)\s*[×x\*]\s*10\s*-\s*(\d+)/g,'$1 times 10 to the negative $2');
+  t=t.replace(/(\d[\d.]*)\s*[×x\*]\s*10\s*\+?\s*(\d+)/g,'$1 times 10 to the $2');
+  t=t.replace(/1x10\s*(\d+)/g,'1 times 10 to the $1');
+  t=t.replace(/\b10-(\d+)/g,'10 to the negative $1');
+  t=t.replace(/\b10\+?(\d+)/g,'10 to the $1');
+
+  // ── Math/symbol substitutions ──
+  t=t.replace(/[×x]\s*/g,' times ');
+  t=t.replace(/→|⟶|\x0f/g,' yields ');
+  t=t.replace(/ΔH°?/g,'delta H');
+  t=t.replace(/Δ/g,'delta ');
+  t=t.replace(/°rxn/g,' degrees rxn');
+  t=t.replace(/°(?=[CFK\s]|$)/g,' degrees ');
+  t=t.replace(/≥/g,' greater than or equal to ');
+  t=t.replace(/≤/g,' less than or equal to ');
+  t=t.replace(/\bσ\b/g,'sigma');
+  t=t.replace(/\bΗ\b/g,'sigma');
+  t=t.replace(/\bπ\b/g,'pi');
+  t=t.replace(/\bdelta\s+bond/g,'pi bond');
+  t=t.replace(/\bλ\b/g,'lambda');
+  t=t.replace(/\bν\b/g,'nu');
+
+  // ── Ionisation energies ──
+  t=t.replace(/IE\s*(\d)\s*=\s*([\d,]+)/g,'IE $1 equals $2 kilojoules per mole');
+
+  // ── Units ──
+  t=t.replace(/\bkJ\/mol\b/g,'kilojoules per mole');
+  t=t.replace(/\bJ\/mol\b/g,'joules per mole');
+  t=t.replace(/\bkJ\b/g,'kilojoules');
+  t=t.replace(/\bMHz\b/g,'megahertz');
+  t=t.replace(/\bnm\b/g,'nanometers');
+  t=t.replace(/\bs-1\b|\bs\^-1\b/g,'per second');
+  t=t.replace(/\bHz\b/g,'hertz');
+  t=t.replace(/\batm\b/g,'atmospheres');
+  t=t.replace(/\bmmHg\b/g,'millimeters of mercury');
+  t=t.replace(/\b6\.0\s*m\b/g,'6.0 meters');
+
+  // ── Ordering / inequality ──
+  t=t.replace(/([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})/g,
     '$1 is less than $2 is less than $3');
-  t = t.replace(/\b([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})\b/g,
-    '$1 is less than $2');
-  t = t.replace(/\b([A-Za-z]{1,2})\s*>\s*([A-Za-z]{1,2})\b/g,
-    '$1 is greater than $2');
+  t=t.replace(/([A-Za-z]{1,2})\s*<\s*([A-Za-z]{1,2})/g,'$1 is less than $2');
+  t=t.replace(/([A-Za-z]{1,2})\s*>\s*([A-Za-z]{1,2})/g,'$1 is greater than $2');
 
-  // ── 15. n= transitions (quantum/energy levels) ──
-  t = t.replace(/\bn\s*=\s*(\d+)\s*to\s*n\s*=\s*(\d+)/gi,
-    'n equals $1 to n equals $2');
-
-  // ── 16. Period / group descriptors ──
-  t = t.replace(/\bperiod\s+(\d)\b/gi, 'period $1');
-  t = t.replace(/\bgroup\s+([IVX\dAB]+)\b/gi, 'group $1');
-
-  // ── 17. Multi-part labels ──
-  t = t.replace(/\n\s*([a-d])\s*\)/g, '\nPart $1:');
-
-  // ── 18. Bond energy table lines ──
-  // "Xe-F  147" → "Xe single bond F: 147 kilojoules per mole"
-  t = t.replace(/^([A-Z][a-z]?)-([A-Z][a-z]?)\s+(\d+)\s*$/gm,
+  // ── Bond energy table lines ──
+  t=t.replace(/([A-Z][a-z]?) single bond ([A-Z][a-z]?)\s+(\d+)/g,
     '$1 single bond $2: $3 kilojoules per mole');
 
-  // ── 19. Electronegativity table ──
-  // "H  C  N  O" followed by "2.1  2.5  3.0  3.5"
-  // Convert to readable sentence (best effort on the values)
-  t = t.replace(/Electronegativity:\s*([\d.\s]+)/g, function(_, vals){
-    return 'Electronegativities: ' + vals.trim().replace(/\s+/g, ', ');
-  });
+  // ── Formal charges in answer choices ──
+  t=t.replace(/\+(\d)\b/g,'positive $1');
+  t=t.replace(/-(\d)\b(?!\d)/g,'negative $1');
 
-  // ── 20. Formal charge notation ──
-  t = t.replace(/\+\s*(\d)\b/g, 'positive $1');
-  t = t.replace(/-\s*(\d)\b/g,  'negative $1');
+  // ── Multi-part labels ──
+  t=t.replace(/PART_([A-D]):/g,'Part $1:');
 
-  // ── 21. Image-only questions (orbital diagrams, Lewis structures) ──
-  // If after all conversion the question body is very short, flag it
-  var bodyLen = t.replace(/Option [A-E]:.*\n?/g,'').trim().length;
-  if (bodyLen < 30 && /orbital diagram|lewis structure|structure below/i.test(raw)) {
-    t += '\n(Note: Refer to the diagram on your printed exam for this question.)';
+  // ── Image-based question note ──
+  if(/orbital diagram|lewis structure|structure below|molecule below|diagram.*below/i.test(t)){
+    if(!/refer to/i.test(t)){
+      t+='\n(Note: Refer to the diagram on your printed exam for this question.)';
+    }
   }
 
-  // ── 22. Clean up whitespace ──
-  // Collapse 3+ spaces to 1
-  t = t.replace(/[ \t]{3,}/g, ' ');
-  // Trim each line
-  t = t.split('\n').map(function(l){ return l.trimEnd(); }).join('\n');
-  // Max 2 consecutive blank lines
-  t = t.replace(/\n{3,}/g, '\n\n');
+  // ── Final cleanup ──
+  t=t.replace(/[ \t]{2,}/g,' ');
+  t=t.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;}).join('\n');
+  t=t.replace(/\n{3,}/g,'\n\n');
 
   return t.trim();
 }
 
-// Spell out electron config tokens: "4s23d8" → "4s2, 3d8"
-function spellConfig(s) {
-  var tokens = s.match(/\d+[spdf]\d+/gi);
-  if (!tokens) return s;
-  return tokens.join(', ');
+function spellConfig(s){
+  var tokens=[];var re=/(\d[spdf]\d+)/gi;var m;
+  while((m=re.exec(s))!==null)tokens.push(m[1]);
+  return tokens.length?tokens.join(', '):s.trim();
 }
-
-function escRe(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+function escRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 
 // ── Review panel ──────────────────────────────────────────────────────────────
-function buildReview() {
-  var tb = document.getElementById('qtable');
-  tb.innerHTML = '';
-  document.getElementById('rc').textContent = gQuestions.length + ' questions';
-  gQuestions.forEach(function(q, i) {
-    var tagClass = q.type === 'multiple_choice' ? 'mc' : q.type === 'free_response' ? 'fr' : 'mp';
-    var tagLabel = q.type === 'multiple_choice' ? 'MC' : q.type === 'free_response' ? 'FR' : 'MP';
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td class="qnum">Q' + q.number +
-        '<span class="qtag ' + tagClass + '">' + tagLabel + '</span></td>' +
-      '<td><textarea id="qta' + i + '" rows="4">' +
-        escHtml(q.spoken) +
-      '</textarea></td>';
+function buildReview(){
+  var tb=document.getElementById('qtable');
+  tb.innerHTML='';
+  document.getElementById('rc').textContent=gQuestions.length+' questions';
+  gQuestions.forEach(function(q,i){
+    var tc=q.type==='multiple_choice'?'mc':q.type==='free_response'?'fr':'mp';
+    var tl=q.type==='multiple_choice'?'MC':q.type==='free_response'?'FR':'MP';
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td class="qnum">Q'+q.number+'<span class="qtag '+tc+'">'+tl+'</span></td>'+
+      '<td><textarea id="qta'+i+'" rows="5">'+escHtml(q.spoken)+'</textarea></td>';
     tb.appendChild(tr);
-    var ta = document.getElementById('qta' + i);
-    ta.addEventListener('input', function(){
-      ta.classList.add('ed');
-      q.spoken = ta.value;
-    });
+    (function(ta,qq){
+      ta.addEventListener('input',function(){ta.classList.add('ed');qq.spoken=ta.value;});
+    })(document.getElementById('qta'+i),q);
   });
 }
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ── Export DOCX ───────────────────────────────────────────────────────────────
-async function exportDoc() {
+async function exportDoc(){
   document.getElementById('prog').classList.add('show');
   document.getElementById('dlrow').classList.remove('show');
-  setP(10, 'Building document XML…');
+  setP(10,'Building document…');
 
-  function xmlEsc(s) {
+  function xe(s){
     return String(s||'')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'');
   }
 
-  var bodyParts = [];
+  var body=[];
 
-  // Exam title header
-  var titleText = gMeta.title || 'Chemistry Exam';
-  var metaLine  = [gMeta.course, gMeta.date].filter(Boolean).join('   ·   ');
-
-  bodyParts.push(
-    '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="80"/>' +
-    '<w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>' +
-    '<w:r><w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr>' +
-    '<w:t xml:space="preserve">' + xmlEsc(titleText) + '</w:t></w:r></w:p>'
+  // Title
+  body.push(
+    '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="80"/></w:pPr>'+
+    '<w:r><w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>'+
+    '<w:t xml:space="preserve">'+xe(gMeta.title||'Chemistry Exam')+'</w:t></w:r></w:p>'
   );
-  if (metaLine) {
-    bodyParts.push(
-      '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="60"/></w:pPr>' +
-      '<w:r><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:color w:val="555555"/></w:rPr>' +
-      '<w:t xml:space="preserve">' + xmlEsc(metaLine) + '</w:t></w:r></w:p>'
+  var ml=[gMeta.course,gMeta.date].filter(Boolean).join('   ·   ');
+  if(ml){
+    body.push(
+      '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="60"/></w:pPr>'+
+      '<w:r><w:rPr><w:sz w:val="24"/><w:szCs w:val="24"/><w:color w:val="555555"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>'+
+      '<w:t xml:space="preserve">'+xe(ml)+'</w:t></w:r></w:p>'
     );
   }
-
-  // Accessibility note
-  bodyParts.push(
-    '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="360"/>' +
-    '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="4" w:color="1F4E79"/></w:pBdr></w:pPr>' +
-    '<w:r><w:rPr><w:i/><w:sz w:val="20"/><w:szCs w:val="20"/><w:color w:val="1F4E79"/></w:rPr>' +
+  // OARS note
+  body.push(
+    '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="360"/>'+
+    '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="4" w:color="1F4E79"/></w:pBdr></w:pPr>'+
+    '<w:r><w:rPr><w:i/><w:sz w:val="20"/><w:szCs w:val="20"/><w:color w:val="1F4E79"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>'+
     '<w:t xml:space="preserve">Read-Aloud Version — Office of Accessibility Resources &amp; Services, High Point University — Open in Microsoft Word and use Review &gt; Read Aloud</w:t></w:r></w:p>'
   );
 
-  setP(30, 'Writing questions…');
+  setP(30,'Writing questions…');
   await tick();
 
-  gQuestions.forEach(function(q, qi) {
-    setP(30 + Math.round(qi / gQuestions.length * 55), 'Writing question ' + q.number + '…');
-
-    var typeLabel = q.type === 'multiple_choice' ? ' — Multiple Choice'
-                  : q.type === 'free_response'   ? ' — Free Response'
-                  : q.type === 'multi_part'       ? ' — Multi-Part'
-                  : '';
-
-    // Question heading
-    bodyParts.push(
-      '<w:p><w:pPr><w:spacing w:before="360" w:after="100"/></w:pPr>' +
-      '<w:r><w:rPr><w:b/><w:sz w:val="30"/><w:szCs w:val="30"/>' +
-      '<w:color w:val="1F4E79"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
-      '<w:t xml:space="preserve">Question ' + q.number + xmlEsc(typeLabel) + '</w:t></w:r></w:p>'
+  gQuestions.forEach(function(q,qi){
+    setP(30+Math.round(qi/gQuestions.length*55),'Writing question '+q.number+'…');
+    var tl=q.type==='multiple_choice'?' — Multiple Choice':
+           q.type==='free_response'  ?' — Free Response':
+           q.type==='multi_part'     ?' — Multi-Part':'';
+    // Heading
+    body.push(
+      '<w:p><w:pPr><w:spacing w:before="360" w:after="100"/></w:pPr>'+
+      '<w:r><w:rPr><w:b/><w:sz w:val="30"/><w:szCs w:val="30"/><w:color w:val="1F4E79"/>'+
+      '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>'+
+      '<w:t xml:space="preserve">Question '+q.number+xe(tl)+'</w:t></w:r></w:p>'
     );
-
-    // Spoken text — each line becomes its own paragraph
-    var lines = (q.spoken || '').split('\n');
-    lines.forEach(function(line) {
-      var l = line.trim();
-      if (!l) return;
-      var isChoice = /^Option [A-E]:/i.test(l);
-      var indent   = isChoice ? '<w:ind w:left="720"/>' : '<w:ind w:left="360"/>';
-      var sz       = isChoice ? '26' : '28';
-      var spacing  = isChoice
-        ? '<w:spacing w:before="40" w:after="40"/>'
-        : '<w:spacing w:before="0" w:after="120"/>';
-      bodyParts.push(
-        '<w:p><w:pPr>' + spacing + indent + '</w:pPr>' +
-        '<w:r><w:rPr><w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' +
-        '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
-        '<w:t xml:space="preserve">' + xmlEsc(l) + '</w:t></w:r></w:p>'
+    // Lines
+    var lines=(q.spoken||'').split('\n');
+    lines.forEach(function(line){
+      var l=line.trim();
+      if(!l)return;
+      var isChoice=/^Option [A-E]:/i.test(l);
+      var ind=isChoice?'<w:ind w:left="720"/>':'<w:ind w:left="360"/>';
+      var sz=isChoice?'26':'28';
+      var sp=isChoice?'<w:spacing w:before="40" w:after="40"/>':'<w:spacing w:before="0" w:after="100"/>';
+      body.push(
+        '<w:p><w:pPr>'+sp+ind+'</w:pPr>'+
+        '<w:r><w:rPr><w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/>'+
+        '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>'+
+        '<w:t xml:space="preserve">'+xe(l)+'</w:t></w:r></w:p>'
       );
     });
   });
 
-  setP(88, 'Packaging…');
-  await tick();
+  setP(88,'Packaging…');await tick();
 
-  var docXml =
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"' +
-    ' xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"' +
-    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
-    ' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"' +
-    ' xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"' +
-    ' mc:Ignorable="w14">' +
-    '<w:body>' +
-    bodyParts.join('') +
-    '<w:sectPr>' +
-    '<w:pgSz w:w="12240" w:h="15840"/>' +
-    '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"' +
-    ' w:header="720" w:footer="720" w:gutter="0"/>' +
-    '</w:sectPr>' +
-    '</w:body></w:document>';
+  var docXml=
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:document xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'+
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'+
+    ' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'+
+    ' xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" mc:Ignorable="w14">'+
+    '<w:body>'+body.join('')+
+    '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>'+
+    '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>'+
+    '</w:sectPr></w:body></w:document>';
 
-  var zip = new JSZip();
-
+  var zip=new JSZip();
   zip.file('[Content_Types].xml',
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
-    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
-    '<Default Extension="xml" ContentType="application/xml"/>' +
-    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
-    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>' +
-    '</Types>'
-  );
-
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '</Types>');
   zip.folder('_rels').file('.rels',
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
-    '</Relationships>'
-  );
-
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+    '</Relationships>');
   zip.folder('word').folder('_rels').file('document.xml.rels',
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>' +
-    '</Relationships>'
-  );
-
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'+
+    '</Relationships>');
   zip.folder('word').file('settings.xml',
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-    '<w:defaultTabStop w:val="720"/>' +
-    '<w:compat><w:compatSetting w:name="compatibilityMode"' +
-    ' w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>' +
-    '</w:settings>'
-  );
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:defaultTabStop w:val="720"/>'+
+    '<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>'+
+    '</w:settings>');
+  zip.folder('word').file('document.xml',docXml);
 
-  zip.folder('word').file('document.xml', docXml);
+  var blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  setP(100,'Done!');
+  setTimeout(function(){document.getElementById('prog').classList.remove('show');},1200);
 
-  var blob = await zip.generateAsync({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}});
-
-  setP(100, 'Done!');
-  setTimeout(function(){ document.getElementById('prog').classList.remove('show'); }, 1200);
-
-  var name = gFile.name.replace(/\.(pdf|docx)$/i, '') + '_ReadAloud.docx';
-  var url  = URL.createObjectURL(blob);
-  document.getElementById('dlbtn').href     = url;
-  document.getElementById('dlbtn').download = name;
-  document.getElementById('dli').textContent = gQuestions.length + ' questions exported → ' + name;
+  var name=gFile.name.replace(/\.(pdf|docx)$/i,'')+'_ReadAloud.docx';
+  var url=URL.createObjectURL(blob);
+  document.getElementById('dlbtn').href=url;
+  document.getElementById('dlbtn').download=name;
+  document.getElementById('dli').textContent=gQuestions.length+' questions exported → '+name;
   document.getElementById('dlrow').classList.add('show');
-  document.getElementById('dlrow').scrollIntoView({behavior:'smooth', block:'nearest'});
+  document.getElementById('dlrow').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function setP(pct, msg) {
-  document.getElementById('pb').style.width = pct + '%';
-  document.getElementById('pl').textContent = msg;
-}
-
-function showErr(msg) {
-  var e = document.getElementById('err');
-  e.textContent = '⚠ ' + msg;
-  e.classList.add('show');
-}
-
-function hideErr() {
-  document.getElementById('err').classList.remove('show');
-}
-
-function tick() {
-  return new Promise(function(r){ setTimeout(r, 10); });
-}
-
-function resetAll() {
-  gFile = null; gQuestions = []; gMeta = {};
-  fi.value = '';
+function setP(pct,msg){document.getElementById('pb').style.width=pct+'%';document.getElementById('pl').textContent=msg;}
+function showErr(msg){var e=document.getElementById('err');e.textContent='⚠ '+msg;e.classList.add('show');}
+function hideErr(){document.getElementById('err').classList.remove('show');}
+function tick(){return new Promise(function(r){setTimeout(r,10);});}
+function resetAll(){
+  gFile=null;gQuestions=[];gMeta={};fi.value='';
   document.getElementById('fpill').classList.remove('show');
-  document.getElementById('btnGo').disabled = true;
+  document.getElementById('btnGo').disabled=true;
   document.getElementById('review').classList.remove('show');
   document.getElementById('dlrow').classList.remove('show');
   document.getElementById('prog').classList.remove('show');
-  hideErr();
-  window.scrollTo({top:0, behavior:'smooth'});
+  hideErr();window.scrollTo({top:0,behavior:'smooth'});
 }
 </script>
 </body>
